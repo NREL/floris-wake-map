@@ -1,0 +1,30 @@
+# python compiled files
+__pycache__/
+.cache
+*.ipynb
+*.ipynb_checkpoints
+*.pyc
+*.egg-info
+dist
+build
+.pytest_cache
+.ruff_cache
+
+# pip meta data
+pip-wheel-metadata
+
+# macOS files
+.DS_Store
+
+# IDE settings and files
+.idea
+.vscode
+
+# Compressed outputs
+*.pkl
+
+# Documentation output
+_site/
+.jekyll-cache/
+_build
+_autosummary/

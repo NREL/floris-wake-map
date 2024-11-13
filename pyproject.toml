@@ -1,0 +1,139 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wakemap"
+version = "0.1"
+description = "Map of cluster wake impacts on existing farms for planning new wind farm locations."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Michael (Misha) Sinner", email = "Michael.Sinner@nrel.gov" },
+]
+license = { file = "LICENSE.txt" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "floris~=4.0",
+    "matplotlib~=3.8",
+    "numpy~=1.20",
+    "pandas~=2.0",
+    "scipy~=1.1",
+    "coloredlogs~=15.0",
+]
+
+[project.optional-dependencies]
+docs = [
+    "jupyter-book",
+    "sphinx-book-theme",
+    "sphinx-autodoc-typehints",
+    "sphinxcontrib-autoyaml",
+    "sphinxcontrib.mermaid",
+    "numpydoc"
+]
+develop = [
+    "pytest",
+    "pre-commit",
+    "ruff",
+    "isort"
+]
+
+[tool.setuptools.packages.find]
+include = ["wakemap*"]
+
+[project.urls]
+# Homepage = "https://github.com/NREL/flasc"
+# Documentation = "https://readthedocs.org"
+
+
+[coverage.run]
+# Coverage.py configuration file
+# https://coverage.readthedocs.io/en/latest/config.html
+branch = true
+source = "flasc/*"
+omit = [
+    "tests/*"
+]
+
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+filterwarnings = [
+    "ignore::DeprecationWarning:pandas.*:"
+]
+
+
+[tool.ruff]
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+src = ["wakemap", "tests"]
+line-length = 100
+target-version = "py310"
+extend-include = ["*.ipynb"]
+
+
+[tool.ruff.lint]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# See https://github.com/charliermarsh/ruff#supported-rules
+# for rules included and matching to prefix.
+select = ["E", "F", "I", "D"]
+
+# Ignore == -> is as this breaks in pandas
+ignore = ["E712"]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+# fixable = ["A", "B", "C", "D", "E", "F"]
+fixable = ["E", "F", "I", "D"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["wakemap"]
+order-by-type = false
+
+# [tool.ruff.format]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `F401` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
+"__init__.py" = ["F401"]
+
+# Ignore pydocstyle in directories besides wakemap
+"wakemap/timing_tests/*" = ["D"]
+"wakemap/version.py" = ["D"]
+"tests/*" = ["D"]
+"examples_*/*" = ["D"]
+"docs/*" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
