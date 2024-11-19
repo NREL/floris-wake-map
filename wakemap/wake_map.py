@@ -119,7 +119,6 @@ class WakeMap():
         farm.
         """
         self.expected_powers_existing_raw = []
-        self.expected_powers_candidates_raw = []
         for i in range(self.n_candidates):
             if self.verbose and i % 10 == 0:
                 print("Computing impact on existing:", i, "of", self.n_candidates)
@@ -128,13 +127,36 @@ class WakeMap():
                 layout_x=self.all_candidates_x[self.groups[i]],
                 layout_y=self.all_candidates_y[self.groups[i]]
             )
-            Epower_existing, Epower_candidate = _compute_expected_powers_single(
+            Epower_existing = _compute_expected_powers_existing_single(
                 self.fmodel_existing,
                 fmodel_candidate,
                 self.fmodel_existing.wind_data
             )
             self.expected_powers_existing_raw.append(Epower_existing)
-            self.expected_powers_candidates_raw.append(Epower_candidate)
+
+        if self.verbose:
+            print("Computing impact on candidates.")
+        # Start with just a hub height wind speed (simpler than rotor averaging)
+        wind_speeds = self.fmodel_existing.sample_flow_at_points(
+            x=self.all_candidates_x,
+            y=self.all_candidates_y,
+            z=self.fmodel_all_candidates.reference_wind_height * np.ones_like(self.all_candidates_x)
+        )
+        # Get power() values for those speeds
+        candidate_powers = self.fmodel_all_candidates.core.farm.turbine_map[0].power_function(
+            power_thrust_table=self.fmodel_all_candidates.core.farm.turbine_map[0].power_thrust_table,
+            velocities=wind_speeds,
+            air_density=self.fmodel_all_candidates.core.flow_field.air_density,
+            yaw_angles=np.zeros_like(wind_speeds),
+            tilt_angles=np.zeros_like(wind_speeds), # MAYBE NOT?
+            tilt_interp=self.fmodel_all_candidates.core.farm.turbine_map[0].tilt_interp,
+        )
+        # Apply frequency to compute expected powers
+        frequencies = self.fmodel_existing.wind_data.unpack_freq()
+        self.expected_powers_candidates_raw = np.nansum(
+            np.multiply(frequencies.reshape(-1, 1), candidate_powers),
+            axis=0
+        )
 
     def compute_raw_expected_powers_parallel(self):
         """
@@ -306,7 +328,7 @@ class WakeMap():
 
         return ax
 
-def _compute_expected_powers_single(fmodel_existing, fmodel_candidate, wind_rose):
+def _compute_expected_powers_existing_single(fmodel_existing, fmodel_candidate, wind_rose):
     """
     Compute the expected power for a single candidate group.
     """
@@ -314,8 +336,4 @@ def _compute_expected_powers_single(fmodel_existing, fmodel_candidate, wind_rose
     fm_both.set(wind_data=wind_rose)
     fm_both.run()
 
-    all_expected_powers = fm_both.get_expected_turbine_powers()
-    expected_powers_existing = all_expected_powers[:fmodel_existing.layout_x.shape[0]]
-    expected_powers_candidate = all_expected_powers[fmodel_existing.layout_x.shape[0]:]
-
-    return (expected_powers_existing, expected_powers_candidate)
+    return fm_both.get_expected_turbine_powers()[:fmodel_existing.layout_x.shape[0]]
