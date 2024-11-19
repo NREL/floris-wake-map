@@ -5,6 +5,7 @@ from typing import (
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pathos
 
 from floris import FlorisModel, WindRose
 from floris import layout_visualization as layout_viz
@@ -291,18 +292,23 @@ class WakeMap():
         else:
             fig = ax.get_figure()
 
-        # TODO: fill locations of existing farm with NaNs for better viz.
         ctrf = ax.tricontourf(
             self.all_candidates_x,
             self.all_candidates_y,
             self.process_existing_expected_powers()/normalizer,
             cmap="Blues"
         )
-
         fig.colorbar(ctrf, ax=ax)
 
+        # Cover the area of the existing farm with white
+        ax.tricontourf(
+            self.fmodel_existing.layout_x,
+            self.fmodel_existing.layout_y,
+            np.ones_like(self.fmodel_existing.layout_x),
+            colors="white",
+        )
+
         return ax
-        pass
 
     def plot_candidate_expected_powers(
             self,
@@ -323,8 +329,15 @@ class WakeMap():
             self.process_candidate_expected_powers()/normalizer,
             cmap="Purples"
         )
-
         fig.colorbar(ctrf, ax=ax)
+
+        # Cover the area of the existing farm with white
+        ax.tricontourf(
+            self.fmodel_existing.layout_x,
+            self.fmodel_existing.layout_y,
+            np.ones_like(self.fmodel_existing.layout_x),
+            colors="white",
+        )
 
         return ax
 
