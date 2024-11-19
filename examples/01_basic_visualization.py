@@ -29,8 +29,8 @@ fmodel.set(
 wakemap = WakeMap(
     fmodel,
     wind_rose_test,
-    min_dist_D=nm/240,
-    group_diameter_D=25,
+    min_dist=nm,
+    group_diameter=6000,
     bounding_box={"x_min": -10000, "x_max": 25000, "y_min": -10000, "y_max": 25000},
     verbose=True
 )

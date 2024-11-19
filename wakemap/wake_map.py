@@ -17,23 +17,23 @@ class WakeMap():
     """
 
     def __init__(
-            self,
-            fmodel: FlorisModel,
-            wind_rose: WindRose,
-            min_dist_D: float | None = None,
-            group_diameter_D: float | None = None,
-            bounding_box: Dict[str, float] | None = None,
-            parallel_max_workers: int | None = None,
-            verbose: bool = False
-        ):
+        self,
+        fmodel: FlorisModel,
+        wind_rose: WindRose,
+        min_dist: float | None = None,
+        group_diameter: float | None = None,
+        bounding_box: Dict[str, float] | None = None,
+        parallel_max_workers: int | None = None,
+        verbose: bool = False
+    ):
         """
         Initialize the WakeMap object.
 
         Args:
             fmodel: FlorisModel object
             wind_rose: WindRose object
-            min_dist_D: Minimum distance between turbines in rotor diameters
-            group_diameter_D: Diameter of the group of turbines in rotor diameters
+            min_dist: Minimum distance between turbines in meters
+            group_diameter: Diameter of the group of turbines in meters
             bounding_box: Dictionary of bounding box limits. Should contain keys
                 "x_min", "x_max", "y_min", "y_max"
             parallel_max_workers: Maximum number of workers for parallel computation
@@ -45,19 +45,18 @@ class WakeMap():
         self.fmodel_existing = fmodel
         self.fmodel_existing.set(wind_data=wind_rose)
 
-        # TODO: check all rotor diameters are the same
-        self.D = self.fmodel_existing.core.farm.turbine_definitions[0]["rotor_diameter"]
+        nautical_mile = 1852 # m
 
         if bounding_box is None:
             bounding_box = {
-                "x_min": self.fmodel_existing.layout_x.min() - 30*self.D,
-                "x_max": self.fmodel_existing.layout_x.max() + 30*self.D,
-                "y_min": self.fmodel_existing.layout_y.min() - 30*self.D,
-                "y_max": self.fmodel_existing.layout_y.max() + 30*self.D
+                "x_min": self.fmodel_existing.layout_x.min() - 5*nautical_mile,
+                "x_max": self.fmodel_existing.layout_x.max() + 5*nautical_mile,
+                "y_min": self.fmodel_existing.layout_y.min() - 5*nautical_mile,
+                "y_max": self.fmodel_existing.layout_y.max() + 5*nautical_mile
             }
         self.bounding_box = bounding_box
-        self.min_dist_D = min_dist_D if min_dist_D is not None else 5
-        self.group_diameter_D = group_diameter_D if group_diameter_D is not None else 22
+        self.min_dist = min_dist if min_dist is not None else nautical_mile
+        self.group_diameter = group_diameter if group_diameter is not None else 3*nautical_mile
         self.create_candidate_locations()
 
         self.create_candidate_groups()
@@ -65,23 +64,16 @@ class WakeMap():
     def create_candidate_locations(self):
         """
         Create a floris model with all candidate locations.
-
-        Args:
-            min_dist_D: Minimum distance between turbines in rotor diameters
-            x_min_D: Minimum x-coordinate in rotor diameters
-            x_max_D: Maximum x-coordinate in rotor diameters
-            y_min_D: Minimum y-coordinate in rotor diameters
-            y_max_D: Maximum y-coordinate in rotor diameters
         """
         x_ = np.arange(
             self.bounding_box["x_min"],
             self.bounding_box["x_max"] + 0.1,
-            self.min_dist_D * self.D
+            self.min_dist
         )
         y_ = np.arange(
             self.bounding_box["y_min"],
             self.bounding_box["y_max"] + 0.1,
-            self.min_dist_D * self.D
+            self.min_dist
         )
 
         x, y = np.meshgrid(x_, y_)
@@ -91,7 +83,7 @@ class WakeMap():
         existing_xy = np.column_stack([self.fmodel_existing.layout_x, self.fmodel_existing.layout_y])
         mask = np.ones(xy.shape[0], dtype=bool)
         for i in range(existing_xy.shape[0]):
-            mask = mask & (np.linalg.norm(xy - existing_xy[i], axis=1) > self.min_dist_D*self.D)
+            mask = mask & (np.linalg.norm(xy - existing_xy[i], axis=1) > self.min_dist)
         self.all_candidates_x = xy[mask,0]
         self.all_candidates_y = xy[mask,1]
 
@@ -113,7 +105,7 @@ class WakeMap():
             mask = np.linalg.norm(
                 xy - np.column_stack([self.all_candidates_x, self.all_candidates_y]),
                 axis=1
-            ) <= self.group_diameter_D*self.D/2
+            ) <= self.group_diameter/2
             self.groups.append(np.where(mask)[0])
 
     def compute_raw_expected_powers_serial(self):
@@ -190,6 +182,9 @@ class WakeMap():
         self._compute_expected_powers_candidates()
 
     def _compute_expected_powers_candidates(self):
+        """
+        Compute expected power for candidates, based on FlorisModel.sample_flow_at_points().
+        """
         # Start with just a hub height wind speed (simpler than rotor averaging)
         wind_speeds = self.fmodel_existing.sample_flow_at_points(
             x=self.all_candidates_x,
@@ -226,7 +221,7 @@ class WakeMap():
 
     def process_candidate_expected_powers(self):
         """
-        Is this doing anything? If so, what? Should it be? Hmm... maybe still useful?
+        Is this doing anything? If so, what? Should it be? Maybe still useful?
         For now, just return the raw singular powers
         """
         if not hasattr(self, "expected_powers_candidates_raw"):
@@ -254,10 +249,10 @@ class WakeMap():
 
     #### VISUALIZATION METHODS
     def plot_existing_farm(
-            self,
-            ax: plt.Axes | None = None,
-            plotting_dict: Dict[str, Any] = {},
-            subset: list | None = None
+        self,
+        ax: plt.Axes | None = None,
+        plotting_dict: Dict[str, Any] = {},
+        subset: list | None = None
     ):
         """
         Plot the existing farm layout.
@@ -281,9 +276,9 @@ class WakeMap():
         return ax
 
     def plot_candidate_locations(
-            self,
-            ax: plt.Axes | None = None,
-            plotting_dict: Dict[str, Any] = {}
+        self,
+        ax: plt.Axes | None = None,
+        plotting_dict: Dict[str, Any] = {}
     ):
         """
         Plot the candidate locations for new turbines.
@@ -307,11 +302,11 @@ class WakeMap():
         return ax
 
     def plot_candidate_groups(
-            self,
-            candidate_idx: int,
-            ax: plt.Axes | None = None,
-            plotting_dict: Dict[str, Any] = {}
-        ):
+        self,
+        candidate_idx: int,
+        ax: plt.Axes | None = None,
+        plotting_dict: Dict[str, Any] = {}
+    ):
         """
         Plot the groups that the candidate belongs to.
         """
@@ -335,7 +330,7 @@ class WakeMap():
                 # Plot a filled circle centering on the idx_c location
                 circle = plt.Circle(
                     (self.all_candidates_x[idx_c], self.all_candidates_y[idx_c]),
-                    self.group_diameter_D*self.D/2,
+                    self.group_diameter/2,
                     **plotting_dict
                 )
                 ax.add_patch(circle)
@@ -343,11 +338,11 @@ class WakeMap():
         return ax
 
     def plot_existing_expected_powers(
-            self,
-            ax: plt.Axes | None = None,
-            normalizer: float = 1e6,
-            colorbar_label: str = "Existing turbine power [MW]"
-        ):
+        self,
+        ax: plt.Axes | None = None,
+        normalizer: float = 1e6,
+        colorbar_label: str = "Existing turbine power [MW]"
+    ):
         """
         Plot the expected powers of the existing farm.
         """
@@ -360,11 +355,11 @@ class WakeMap():
         )
 
     def plot_candidate_expected_powers(
-            self,
-            ax: plt.Axes | None = None,
-            normalizer: float = 1e6,
-            colorbar_label: str = "Candidate turbine power [MW]"
-        ):
+        self,
+        ax: plt.Axes | None = None,
+        normalizer: float = 1e6,
+        colorbar_label: str = "Candidate turbine power [MW]"
+    ):
         """
         Plot the expected powers of the candidate farm.
         """
