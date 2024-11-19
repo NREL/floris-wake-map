@@ -52,6 +52,7 @@ ce = wakemap.process_candidate_expected_powers()
 ax = wakemap.plot_candidate_expected_powers(normalizer=1e6)
 ax = wakemap.plot_existing_farm(ax=ax)
 ax = wakemap.plot_candidate_locations(ax=ax)
+ax.set_aspect("equal")
 fig = ax.get_figure()
 fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
@@ -59,8 +60,21 @@ fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format
 ax = wakemap.plot_existing_expected_powers(normalizer=1e6)
 ax = wakemap.plot_existing_farm(ax=ax)
 ax = wakemap.plot_candidate_locations(ax=ax)
+ax.set_aspect("equal")
 fig = ax.get_figure()
 fig.savefig("figs/existing_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
+# Existing map, subset
+subset=range(10)
+es = wakemap.process_existing_expected_powers_subset(subset=subset)
+ax = wakemap.plot_power_contour(
+    es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine power [MW]"
+)
+ax = wakemap.plot_existing_farm(ax=ax)
+ax = wakemap.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
+ax = wakemap.plot_candidate_locations(ax=ax)
+ax.set_aspect("equal")
+fig = ax.get_figure()
+fig.savefig("figs/subset_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
 plt.show()

@@ -179,6 +179,8 @@ class WakeMap():
             lambda x: _compute_expected_powers_existing_single(*x),
             parallel_inputs
         )
+        pathos_pool.close()
+        pathos_pool.join()
         if self.verbose:
             print("Computation of existing farm impacts completed in",
                   "{:.1f} s.".format(perf_counter() - t_start))
@@ -212,6 +214,7 @@ class WakeMap():
 
     def process_existing_expected_powers(self):
         """
+        Average over all existing turbines for each candidate.
         """
         if not hasattr(self, "expected_powers_existing_raw"):
             raise AttributeError(
@@ -223,24 +226,38 @@ class WakeMap():
 
     def process_candidate_expected_powers(self):
         """
+        Is this doing anything? If so, what? Should it be? Hmm... maybe still useful?
+        For now, just return the raw singular powers
         """
         if not hasattr(self, "expected_powers_candidates_raw"):
             raise AttributeError(
                 "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
             )
 
-        # Build big matrix for each; nanmean over them somehow. Shouldn't be too hard?
-        combined_powers = np.full((self.n_candidates, self.n_candidates), np.nan)
-        for i, g in enumerate(self.groups):
-            combined_powers[i, g] = self.expected_powers_candidates_raw[i]
+        # combined_powers = np.full((self.n_candidates, self.n_candidates), np.nan)
+        # for i, g in enumerate(self.groups):
+        #     combined_powers[i, g] = self.expected_powers_candidates_raw[i]
 
-        return np.nanmean(combined_powers, axis=0)
+        # return np.nanmean(combined_powers, axis=0)
+        return self.expected_powers_candidates_raw
 
-    # Visualizations
+    def process_existing_expected_powers_subset(self, subset: list):
+        """
+        Average over all turbines in subset for each candidate.
+        """
+        if not hasattr(self, "expected_powers_existing_raw"):
+            raise AttributeError(
+                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
+            )
+
+        return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
+
+    #### VISUALIZATION METHODS
     def plot_existing_farm(
             self,
             ax: plt.Axes | None = None,
-            plotting_dict: Dict[str, Any] = {}
+            plotting_dict: Dict[str, Any] = {},
+            subset: list | None = None
     ):
         """
         Plot the existing farm layout.
@@ -249,12 +266,17 @@ class WakeMap():
             ax: Matplotlib axes object
             plotting_dict: Dictionary of plotting options
         """
-        # Hardcode black for existing farm
-        plotting_dict["color"] = "black"
-
         if ax is None:
             _, ax = plt.subplots()
-        layout_viz.plot_turbine_points(self.fmodel_existing, ax=ax, plotting_dict=plotting_dict)
+        
+        fmodel_plot = self.fmodel_existing.copy()
+        if subset is not None:
+            fmodel_plot.set(
+                layout_x=self.fmodel_existing.layout_x[subset],
+                layout_y=self.fmodel_existing.layout_y[subset]
+            )
+
+        layout_viz.plot_turbine_points(fmodel_plot, ax=ax, plotting_dict=plotting_dict)
 
         return ax
 
@@ -270,8 +292,9 @@ class WakeMap():
             ax: Matplotlib axes object
             plotting_dict: Dictionary of plotting options
         """
-        # Hardcode gray for candidate locations
-        plotting_dict["color"] = "lightgray"
+        # Gray for candidate locations
+        if "color" not in plotting_dict.keys():
+            plotting_dict["color"] = "lightgray"
         
         if ax is None:
             _, ax = plt.subplots()
@@ -390,6 +413,7 @@ class WakeMap():
 
         return ax
 
+#### HELPER FUNCTIONS
 def _compute_expected_powers_existing_single(fmodel_existing, fmodel_candidate, wind_rose):
     """
     Compute the expected power for a single candidate group.
