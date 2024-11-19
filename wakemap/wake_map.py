@@ -322,7 +322,44 @@ class WakeMap():
     def plot_existing_expected_powers(
             self,
             ax: plt.Axes | None = None,
-            normalizer: float = 1.0
+            normalizer: float = 1e6,
+            colorbar_label: str = "Existing turbine power [MW]"
+        ):
+        """
+        Plot the expected powers of the existing farm.
+        """
+        return self.plot_power_contour(
+            self.process_existing_expected_powers(),
+            ax=ax,
+            normalizer=normalizer,
+            cmap="Blues",
+            colorbar_label=colorbar_label
+        )
+
+    def plot_candidate_expected_powers(
+            self,
+            ax: plt.Axes | None = None,
+            normalizer: float = 1e6,
+            colorbar_label: str = "Candidate turbine power [MW]"
+        ):
+        """
+        Plot the expected powers of the candidate farm.
+        """
+        return self.plot_power_contour(
+            self.process_candidate_expected_powers(),
+            ax=ax,
+            normalizer=normalizer,
+            cmap="Purples",
+            colorbar_label=colorbar_label
+        )
+    
+    def plot_power_contour(
+        self,
+        powers,
+        ax: plt.Axes | None = None,
+        normalizer: float = 1.0,
+        cmap: str | None = None,
+        colorbar_label: str = ""
     ):
         """
         Plot the expected powers of the existing farm.
@@ -335,10 +372,11 @@ class WakeMap():
         ctrf = ax.tricontourf(
             self.all_candidates_x,
             self.all_candidates_y,
-            self.process_existing_expected_powers()/normalizer,
-            cmap="Blues"
+            powers/normalizer,
+            cmap=cmap
         )
-        fig.colorbar(ctrf, ax=ax)
+        cbar = fig.colorbar(ctrf, ax=ax)
+        cbar.set_label(colorbar_label)
 
         # Cover the area of the existing farm with white
         ax.tricontourf(
@@ -347,37 +385,8 @@ class WakeMap():
             np.ones_like(self.fmodel_existing.layout_x),
             colors="white",
         )
-
-        return ax
-
-    def plot_candidate_expected_powers(
-            self,
-            ax: plt.Axes | None = None,
-            normalizer: float = 1.0
-        ):
-        """
-        Plot the expected powers of the candidate farm.
-        """
-        if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = ax.get_figure()
-        
-        ctrf = ax.tricontourf(
-            self.all_candidates_x,
-            self.all_candidates_y,
-            self.process_candidate_expected_powers()/normalizer,
-            cmap="Purples"
-        )
-        fig.colorbar(ctrf, ax=ax)
-
-        # Cover the area of the existing farm with white
-        ax.tricontourf(
-            self.fmodel_existing.layout_x,
-            self.fmodel_existing.layout_y,
-            np.ones_like(self.fmodel_existing.layout_x),
-            colors="white",
-        )
+        ax.set_xlabel("X location [m]")
+        ax.set_ylabel("Y location [m]")
 
         return ax
 
