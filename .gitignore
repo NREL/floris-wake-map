@@ -23,6 +23,9 @@ pip-wheel-metadata
 # Compressed outputs
 *.pkl
 
+# Graphical outputs
+*.png
+
 # Documentation output
 _site/
 .jekyll-cache/
