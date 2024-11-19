@@ -6,6 +6,7 @@ from typing import (
 import numpy as np
 import matplotlib.pyplot as plt
 import pathos
+from time import perf_counter
 
 from floris import FlorisModel, WindRose
 from floris import layout_visualization as layout_viz
@@ -22,7 +23,7 @@ class WakeMap():
             min_dist_D: float | None = None,
             group_diameter_D: float | None = None,
             bounding_box: Dict[str, float] | None = None,
-            parallel_compute_options: Dict[str, Any] | None = None,
+            parallel_max_workers: int | None = None,
             verbose: bool = False
         ):
         """
@@ -35,10 +36,11 @@ class WakeMap():
             group_diameter_D: Diameter of the group of turbines in rotor diameters
             bounding_box: Dictionary of bounding box limits. Should contain keys
                 "x_min", "x_max", "y_min", "y_max"
+            parallel_max_workers: Maximum number of workers for parallel computation
             verbose: Verbosity flag
         """
         self.verbose = verbose
-        self.parallel_compute_options = parallel_compute_options
+        self.parallel_max_workers = parallel_max_workers
 
         self.fmodel_existing = fmodel
         self.fmodel_existing.set(wind_data=wind_rose)
@@ -120,9 +122,11 @@ class WakeMap():
         farm.
         """
         self.expected_powers_existing_raw = []
+        t_start = perf_counter()
         for i in range(self.n_candidates):
             if self.verbose and i % 10 == 0:
-                print("Computing impact on existing:", i, "of", self.n_candidates)
+                print("Computing impact on existing:", i, "of", self.n_candidates,
+                      "({:.1f} s)".format(perf_counter() - t_start))
             fmodel_candidate = self.fmodel_all_candidates.copy()
             fmodel_candidate.set(
                 layout_x=self.all_candidates_x[self.groups[i]],
@@ -136,7 +140,54 @@ class WakeMap():
             self.expected_powers_existing_raw.append(Epower_existing)
 
         if self.verbose:
+            print("Computation of existing farm impacts completed in",
+                  "{:.1f} s.".format(perf_counter() - t_start))
             print("Computing impact on candidates.")
+        self._compute_expected_powers_candidates()
+
+    def compute_raw_expected_powers_parallel(self):
+        """
+        Compute the turbine expected power for each candidate group; as well as for the existing
+        farm using pathos.
+        """
+        if self.parallel_max_workers is None:
+            if self.verbose:
+                print("No maximum number of workers provided. Using CPU count.")
+            max_workers = pathos.helpers.cpu_count()
+        else:
+            max_workers = self.parallel_max_workers
+        pathos_pool = pathos.pools.ProcessPool(nodes=max_workers)
+
+        # Create inputs to parallelization procedure
+        parallel_inputs = []
+        if self.verbose:
+            print("Preparing for parallel computation.")
+        for i in range(self.n_candidates):
+            fmodel_candidate = self.fmodel_all_candidates.copy()
+            fmodel_candidate.set(
+                layout_x=self.all_candidates_x[self.groups[i]],
+                layout_y=self.all_candidates_y[self.groups[i]]
+            )
+            parallel_inputs.append(
+                (self.fmodel_existing, fmodel_candidate, self.fmodel_existing.wind_data)
+            )
+
+        t_start = perf_counter()
+        if self.verbose:
+            print("Computing impact on existing via parallel computation.")
+        self.expected_powers_existing_raw = pathos_pool.map(
+            lambda x: _compute_expected_powers_existing_single(*x),
+            parallel_inputs
+        )
+        if self.verbose:
+            print("Computation of existing farm impacts completed in",
+                  "{:.1f} s.".format(perf_counter() - t_start))
+
+        if self.verbose:
+            print("Computing impact on candidates.")
+        self._compute_expected_powers_candidates()
+
+    def _compute_expected_powers_candidates(self):
         # Start with just a hub height wind speed (simpler than rotor averaging)
         wind_speeds = self.fmodel_existing.sample_flow_at_points(
             x=self.all_candidates_x,
@@ -158,17 +209,6 @@ class WakeMap():
             np.multiply(frequencies.reshape(-1, 1), candidate_powers),
             axis=0
         )
-
-    def compute_raw_expected_powers_parallel(self):
-        """
-        Compute the turbine expected power for each candidate group; as well as for the existing
-        farm using pathos.
-        """
-        if self.parallel_compute_options is None:
-            if self.verbose:
-                print("No parallel compute options provided. Using default options.")
-            # Create defaults
-        pass
 
     def process_existing_expected_powers(self):
         """
