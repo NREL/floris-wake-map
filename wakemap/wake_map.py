@@ -167,13 +167,13 @@ class WakeMap():
         if self.verbose:
             print("Preparing for parallel computation.")
         for i in range(self.n_candidates):
-            fmodel_candidate = self.fmodel_all_candidates.copy()
-            fmodel_candidate.set(
-                layout_x=self.all_candidates_x[self.groups[i]],
-                layout_y=self.all_candidates_y[self.groups[i]]
-            )
+            # fmodel_candidate = self.fmodel_all_candidates.copy()
+            # fmodel_candidate.set(
+            #     layout_x=self.all_candidates_x[self.groups[i]],
+            #     layout_y=self.all_candidates_y[self.groups[i]]
+            # )
             parallel_inputs.append(
-                (self.fmodel_existing, fmodel_candidate, self.fmodel_existing.wind_data)
+                (self.fmodel_existing, self.fmodel_all_candidates, self.groups[i])
             )
 
         t_start = perf_counter()
@@ -184,8 +184,8 @@ class WakeMap():
         #     parallel_inputs
         # )
         with mp.Pool(max_workers) as p:
-            self.expected_powers_existing_raw = p.map(
-                lambda x: _compute_expected_powers_existing_single(*x),
+            self.expected_powers_existing_raw = p.starmap(
+                _compute_expected_powers_existing_single,
                 parallel_inputs
             )
         # pathos_pool.close()
@@ -448,12 +448,17 @@ class WakeMap():
         return ax
 
 #### HELPER FUNCTIONS
-def _compute_expected_powers_existing_single(fmodel_existing, fmodel_candidate, wind_rose):
+def _compute_expected_powers_existing_single(fmodel_existing, fmodel_candidates_all, group):
     """
     Compute the expected power for a single candidate group.
     """
+    fmodel_candidate = fmodel_candidates_all.copy()
+    fmodel_candidate.set(
+        layout_x=fmodel_candidates_all.layout_x[group],
+        layout_y=fmodel_candidates_all.layout_y[group]
+    )
     fm_both = FlorisModel.merge_floris_models([fmodel_existing, fmodel_candidate])
-    fm_both.set(wind_data=wind_rose)
+    fm_both.set(wind_data=fmodel_existing.wind_data)
     fm_both.run()
 
     return fm_both.get_expected_turbine_powers()[:fmodel_existing.layout_x.shape[0]]
