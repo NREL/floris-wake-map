@@ -23,6 +23,7 @@ class WakeMap():
         min_dist: float | None = None,
         group_diameter: float | None = None,
         bounding_box: Dict[str, float] | None = None,
+        candidate_turbine = "iea_15mw",
         parallel_max_workers: int | None = None,
         verbose: bool = False
     ):
@@ -36,11 +37,13 @@ class WakeMap():
             group_diameter: Diameter of the group of turbines in meters
             bounding_box: Dictionary of bounding box limits. Should contain keys
                 "x_min", "x_max", "y_min", "y_max"
+            candidate_turbine: Turbine type to use for candidate turbines
             parallel_max_workers: Maximum number of workers for parallel computation
             verbose: Verbosity flag
         """
         self.verbose = verbose
         self.parallel_max_workers = parallel_max_workers
+        self.candidate_turbine = candidate_turbine
 
         self.fmodel_existing = fmodel
         self.fmodel_existing.set(wind_data=wind_rose)
@@ -90,7 +93,8 @@ class WakeMap():
         self.fmodel_all_candidates = self.fmodel_existing.copy()
         self.fmodel_all_candidates.set(
             layout_x=self.all_candidates_x,
-            layout_y=self.all_candidates_y
+            layout_y=self.all_candidates_y,
+            turbine_type=[self.candidate_turbine]
         )
 
         self.n_candidates = self.all_candidates_x.shape[0]
@@ -246,6 +250,28 @@ class WakeMap():
             )
 
         return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
+
+    def save_raw_expected_powers(self, filename: str):
+        """
+        Save the raw expected powers to a file.
+        """
+        np.savez(
+            filename,
+            expected_powers_existing_raw=self.expected_powers_existing_raw,
+            expected_powers_candidates_raw=self.expected_powers_candidates_raw
+        )
+        if self.verbose:
+            print("Data saved.")
+
+    def load_raw_expected_powers(self, filename: str):
+        """
+        Load the raw expected powers from a file.
+        """
+        data = np.load(filename)
+        self.expected_powers_existing_raw = data["expected_powers_existing_raw"]
+        self.expected_powers_candidates_raw = data["expected_powers_candidates_raw"]
+        if self.verbose:
+            print("Data loaded.")
 
     #### VISUALIZATION METHODS
     def plot_existing_farm(
