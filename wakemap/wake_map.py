@@ -6,6 +6,7 @@ from typing import (
 import numpy as np
 import matplotlib.pyplot as plt
 import pathos
+import multiprocessing as mp
 from time import perf_counter
 
 from floris import FlorisModel, WindRose
@@ -23,8 +24,8 @@ class WakeMap():
         min_dist: float | None = None,
         group_diameter: float | None = None,
         bounding_box: Dict[str, float] | None = None,
-        candidate_turbine = "iea_15mw",
-        parallel_max_workers: int | None = None,
+        candidate_turbine = "iea_15MW",
+        parallel_max_workers: int = -1,
         verbose: bool = False
     ):
         """
@@ -98,6 +99,8 @@ class WakeMap():
         )
 
         self.n_candidates = self.all_candidates_x.shape[0]
+        if self.verbose:
+            print(self.n_candidates, "candidate turbine positions created.")
 
     def create_candidate_groups(self):
         """
@@ -146,13 +149,18 @@ class WakeMap():
         Compute the turbine expected power for each candidate group; as well as for the existing
         farm using pathos.
         """
-        if self.parallel_max_workers is None:
-            if self.verbose:
-                print("No maximum number of workers provided. Using CPU count.")
+        if self.parallel_max_workers == -1:
             max_workers = pathos.helpers.cpu_count()
+            if self.verbose:
+                print("No maximum number of workers provided. Using CPU count ({0}).".format(
+                    max_workers
+                ))
         else:
             max_workers = self.parallel_max_workers
-        pathos_pool = pathos.pools.ProcessPool(nodes=max_workers)
+        print("here", max_workers)
+        #pathos_pool = pathos.pools.ProcessPool(nodes=max_workers)
+        PoolExecutor = mp.Pool
+        print("here")
 
         # Create inputs to parallelization procedure
         parallel_inputs = []
@@ -171,12 +179,17 @@ class WakeMap():
         t_start = perf_counter()
         if self.verbose:
             print("Computing impact on existing via parallel computation.")
-        self.expected_powers_existing_raw = pathos_pool.map(
-            lambda x: _compute_expected_powers_existing_single(*x),
-            parallel_inputs
-        )
-        pathos_pool.close()
-        pathos_pool.join()
+        # self.expected_powers_existing_raw = pathos_pool.map(
+        #     lambda x: _compute_expected_powers_existing_single(*x),
+        #     parallel_inputs
+        # )
+        with mp.Pool(max_workers) as p:
+            self.expected_powers_existing_raw = p.map(
+                lambda x: _compute_expected_powers_existing_single(*x),
+                parallel_inputs
+            )
+        # pathos_pool.close()
+        # pathos_pool.join()
         if self.verbose:
             print("Computation of existing farm impacts completed in",
                   "{:.1f} s.".format(perf_counter() - t_start))
