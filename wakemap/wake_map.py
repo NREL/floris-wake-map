@@ -246,9 +246,6 @@ class WakeMap():
                 "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
             )
 
-        # TODO: How should these be averaged if there are multiple turbine types (with different rated powers?)
-        # Possibly they should be first converted into a capacity factor by dividing by the rated power. That's
-        # likely best.
         return np.mean(self.expected_powers_existing_raw, axis=1)
 
 
@@ -279,6 +276,51 @@ class WakeMap():
             )
 
         return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
+    
+    def process_existing_expected_capacity_factors(self):
+        """
+        Average over all existing turbines for each candidate.
+        """
+        if not hasattr(self, "expected_powers_existing_raw"):
+            raise AttributeError(
+                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
+            )
+
+        rated_powers = np.array(
+            [turbine.power_thrust_table["power"].max()
+             for turbine in self.fmodel_existing.core.farm.turbine_map]
+        ).reshape(1, -1)*1e3
+
+        return np.mean(np.array(self.expected_powers_existing_raw)/rated_powers, axis=1)
+    
+    def process_candidate_expected_capacity_factors(self):
+        """
+        """
+        if not hasattr(self, "expected_powers_candidates_raw"):
+            raise AttributeError(
+                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
+            )
+
+        # Only type of candidate turbine
+        rated_power = self.fmodel_all_candidates.core.farm.turbine_map[0]\
+            .power_thrust_table["power"].max()*1e3
+
+        return self.expected_powers_candidates_raw/rated_power
+
+    def process_existing_expected_capacity_factors_subset(self, subset: list):
+        """
+        Average over all turbines in subset for each candidate.
+        """
+        if not hasattr(self, "expected_powers_existing_raw"):
+            raise AttributeError(
+                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
+            )
+        rated_powers = np.array(
+            [turbine.power_thrust_table["power"].max()
+             for turbine in np.array(self.fmodel_all_candidates.core.farm.turbine_map)[subset]]
+        ).reshape(1, -1)*1e3
+
+        return np.mean(np.array(self.expected_powers_existing_raw)[:, subset]/rated_powers, axis=1)
 
     def save_raw_expected_powers(self, filename: str):
         """
@@ -392,43 +434,63 @@ class WakeMap():
 
         return ax
 
-    def plot_existing_expected_powers(
+    def plot_existing_value(
         self,
+        value: str = "power",
         ax: plt.Axes | None = None,
-        normalizer: float = 1e6,
+        normalizer: float = 1.0,
         colorbar_label: str = "Existing turbine power [MW]"
     ):
         """
         Plot the expected powers of the existing farm.
         """
-        return self.plot_power_contour(
-            self.process_existing_expected_powers(),
+        if value == "power":
+            plot_variable = self.process_existing_expected_powers()
+        elif value == "capacity_factor":
+            plot_variable = self.process_existing_expected_capacity_factors()
+        else:
+            raise ValueError("Invalid type. Must be 'power' or 'capacity_factor'.")
+        
+        return self.plot_contour(
+            plot_variable,
             ax=ax,
             normalizer=normalizer,
             cmap="Blues",
             colorbar_label=colorbar_label
         )
 
-    def plot_candidate_expected_powers(
+    def plot_candidate_value(
         self,
+        value: str = "power",
         ax: plt.Axes | None = None,
-        normalizer: float = 1e6,
-        colorbar_label: str = "Candidate turbine power [MW]"
+        normalizer: float = 1.0,
+        colorbar_label: str | None = None,
     ):
         """
         Plot the expected powers of the candidate farm.
         """
-        return self.plot_power_contour(
-            self.process_candidate_expected_powers(),
+        if value == "power":
+            plot_variable = self.process_candidate_expected_powers()
+            if colorbar_label is None:
+                colorbar_label = "Candidate turbine power [MW]"
+        elif value == "capacity_factor":
+            plot_variable = self.process_candidate_expected_capacity_factors()
+            if colorbar_label is None:
+                colorbar_label = "Candidate turbine capacity factor [-]"
+        else:
+            raise ValueError("Invalid type. Must be 'power' or 'capacity_factor'.")
+        
+        return self.plot_contour(
+            plot_variable,
             ax=ax,
             normalizer=normalizer,
             cmap="Purples",
             colorbar_label=colorbar_label
         )
     
-    def plot_power_contour(
+    def plot_contour(
         self,
-        powers,
+        values,
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         cmap: str | None = None,
@@ -445,7 +507,7 @@ class WakeMap():
         ctrf = ax.tricontourf(
             self.all_candidates_x,
             self.all_candidates_y,
-            powers/normalizer,
+            values/normalizer,
             cmap=cmap
         )
         cbar = fig.colorbar(ctrf, ax=ax)

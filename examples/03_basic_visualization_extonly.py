@@ -50,7 +50,7 @@ if __name__ == "__main__":
     ce = wakemap.process_candidate_expected_powers()
 
     # Candidate map (identical, as expected)
-    ax = wakemap.plot_candidate_expected_powers(normalizer=1e6)
+    ax = wakemap.plot_candidate_value(value="capacity_factor")
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     fig.savefig("figs/candidate_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
-    ax = wakemap.plot_existing_expected_powers(normalizer=1e6)
+    ax = wakemap.plot_existing_value(value="capacity_factor")
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
@@ -67,9 +67,9 @@ if __name__ == "__main__":
 
     # Existing map, subset (as for full map).
     subset=range(10)
-    es = wakemap.process_existing_expected_powers_subset(subset=subset)
-    ax = wakemap.plot_power_contour(
-        es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine power [MW]"
+    es = wakemap.process_existing_expected_capacity_factors_subset(subset=subset)
+    ax = wakemap.plot_contour(
+        es, cmap="Blues", colorbar_label="Subset turbine capacity factor [-]"
     )
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
