@@ -32,6 +32,7 @@ if __name__ == "__main__":
         min_dist=nm,
         group_diameter=6000,
         bounding_box={"x_min": -10000, "x_max": 25000, "y_min": -10000, "y_max": 25000},
+        external_losses_only=True,
         verbose=True
     )
 
@@ -43,28 +44,28 @@ if __name__ == "__main__":
     ax = wakemap.plot_candidate_groups(35, ax=ax)
     fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
-    wakemap.compute_raw_expected_powers_serial()
+    wakemap.compute_raw_expected_powers_parallel()
 
     ee = wakemap.process_existing_expected_powers()
     ce = wakemap.process_candidate_expected_powers()
 
-    # Candidate map
+    # Candidate map (identical, as expected)
     ax = wakemap.plot_candidate_expected_powers(normalizer=1e6)
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/candidate_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
 
-    # Existing map
+    # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
     ax = wakemap.plot_existing_expected_powers(normalizer=1e6)
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/existing_power_map.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/existing_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
 
-    # Existing map, subset
+    # Existing map, subset (as for full map).
     subset=range(10)
     es = wakemap.process_existing_expected_powers_subset(subset=subset)
     ax = wakemap.plot_power_contour(
@@ -75,6 +76,6 @@ if __name__ == "__main__":
     ax = wakemap.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/subset_power_map.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/subset_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
 
     plt.show()

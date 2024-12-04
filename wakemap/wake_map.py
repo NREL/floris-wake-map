@@ -26,6 +26,7 @@ class WakeMap():
         bounding_box: Dict[str, float] | None = None,
         candidate_turbine = "iea_15MW",
         parallel_max_workers: int = -1,
+        external_losses_only: bool = False,
         verbose: bool = False
     ):
         """
@@ -40,6 +41,8 @@ class WakeMap():
                 "x_min", "x_max", "y_min", "y_max"
             candidate_turbine: Turbine type to use for candidate turbines
             parallel_max_workers: Maximum number of workers for parallel computation
+            external_losses_only: Flag to compute only the external losses for existing turbines.
+                This speeds up computation.
             verbose: Verbosity flag
         """
         self.verbose = verbose
@@ -64,6 +67,11 @@ class WakeMap():
         self.create_candidate_locations()
 
         self.create_candidate_groups()
+
+        self._compute_existing_single_function = (
+            _compute_expected_powers_existing_single_external_only if external_losses_only
+            else _compute_expected_powers_existing_single
+        )
 
     def create_candidate_locations(self):
         """
@@ -130,7 +138,7 @@ class WakeMap():
             if self.verbose and i % n_print == 0:
                 print("Computing impact on existing:", i, "of", self.n_candidates,
                       "({:.1f} s)".format(perf_counter() - t_start))
-            Epower_existing = _compute_expected_powers_existing_single(
+            Epower_existing = self._compute_existing_single_function(
                 self.fmodel_existing,
                 self.fmodel_all_candidates,
                 self.groups[i]
@@ -190,7 +198,7 @@ class WakeMap():
         # )
         with mp.Pool(max_workers) as p:
             self.expected_powers_existing_raw = p.starmap(
-                _compute_expected_powers_existing_single,
+                self._compute_existing_single_function,
                 parallel_inputs
             )
         # pathos_pool.close()
@@ -462,8 +470,46 @@ def _compute_expected_powers_existing_single(fmodel_existing, fmodel_candidates_
         layout_x=fmodel_candidates_all.layout_x[group],
         layout_y=fmodel_candidates_all.layout_y[group]
     )
-    fm_both = FlorisModel.merge_floris_models([fmodel_existing, fmodel_candidate])
-    fm_both.set(wind_data=fmodel_existing.wind_data)
-    fm_both.run()
+    fmodel_both = FlorisModel.merge_floris_models([fmodel_existing, fmodel_candidate])
+    fmodel_both.set(wind_data=fmodel_existing.wind_data)
+    fmodel_both.run()
 
-    return fm_both.get_expected_turbine_powers()[:fmodel_existing.layout_x.shape[0]]
+    return fmodel_both.get_expected_turbine_powers()[:fmodel_existing.layout_x.shape[0]]
+
+def _compute_expected_powers_existing_single_external_only(
+    fmodel_existing,
+    fmodel_candidates_all,
+    group
+):
+    """
+    Compute the expected power for a single candidate group, but only considering external turbines.
+    """
+
+    fmodel_candidate = fmodel_candidates_all.copy()
+    fmodel_candidate.set(
+        layout_x=fmodel_candidates_all.layout_x[group],
+        layout_y=fmodel_candidates_all.layout_y[group],
+        wind_data=fmodel_existing.wind_data
+    )
+
+    wind_speeds = fmodel_candidate.sample_flow_at_points(
+        x=fmodel_existing.layout_x,
+        y=fmodel_existing.layout_y,
+        z=fmodel_existing.reference_wind_height * np.ones_like(fmodel_existing.layout_x)
+    )
+
+    # Get power() values for those speeds
+    # TODO: This assumes all turbines are the SAME. Should be easy enough to use each individual
+    # turbine's power curve, though.
+    existing_powers = fmodel_existing.core.farm.turbine_map[0].power_function(
+        power_thrust_table=fmodel_existing.core.farm.turbine_map[0].power_thrust_table,
+        velocities=wind_speeds,
+        air_density=fmodel_existing.core.flow_field.air_density,
+        yaw_angles=np.zeros_like(wind_speeds),
+        tilt_angles=np.zeros_like(wind_speeds), # MAYBE NOT?
+        tilt_interp=fmodel_existing.core.farm.turbine_map[0].tilt_interp,
+    )
+
+    # Apply frequency to compute expected powers
+    frequencies = fmodel_existing.wind_data.unpack_freq()
+    return np.nansum(np.multiply(frequencies.reshape(-1, 1), existing_powers), axis=0)
