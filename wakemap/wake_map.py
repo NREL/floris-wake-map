@@ -115,7 +115,7 @@ class WakeMap():
             ) <= self.group_diameter/2
             self.groups.append(np.where(mask)[0])
 
-    def compute_raw_expected_powers_serial(self):
+    def compute_raw_expected_powers_serial(self, save_in_parts=False, filename=None):
         """
         Compute the turbine expected power for each candidate group; as well as for the existing
         farm.
@@ -123,26 +123,31 @@ class WakeMap():
         self.expected_powers_existing_raw = []
         t_start = perf_counter()
         for i in range(self.n_candidates):
-            if self.verbose and i % 10 == 0:
+            if len(self.fmodel_existing.layout_x) > 1000:
+                n_print = 1
+            else:
+                n_print = 10
+            if self.verbose and i % n_print == 0:
                 print("Computing impact on existing:", i, "of", self.n_candidates,
                       "({:.1f} s)".format(perf_counter() - t_start))
-            fmodel_candidate = self.fmodel_all_candidates.copy()
-            fmodel_candidate.set(
-                layout_x=self.all_candidates_x[self.groups[i]],
-                layout_y=self.all_candidates_y[self.groups[i]]
-            )
             Epower_existing = _compute_expected_powers_existing_single(
                 self.fmodel_existing,
-                fmodel_candidate,
-                self.fmodel_existing.wind_data
+                self.fmodel_all_candidates,
+                self.groups[i]
             )
             self.expected_powers_existing_raw.append(Epower_existing)
+
+            if save_in_parts:
+                np.savez(
+                    filename + "_existing_" + str(i),
+                    expected_powers_existing_raw=np.array(self.expected_powers_existing_raw),
+                )
 
         if self.verbose:
             print("Computation of existing farm impacts completed in",
                   "{:.1f} s.".format(perf_counter() - t_start))
             print("Computing impact on candidates.")
-        self._compute_expected_powers_candidates()
+        self.compute_expected_powers_candidates()
 
     def compute_raw_expected_powers_parallel(self):
         """
@@ -196,9 +201,9 @@ class WakeMap():
 
         if self.verbose:
             print("Computing impact on candidates.")
-        self._compute_expected_powers_candidates()
+        self.compute_expected_powers_candidates()
 
-    def _compute_expected_powers_candidates(self):
+    def compute_expected_powers_candidates(self):
         """
         Compute expected power for candidates, based on FlorisModel.sample_flow_at_points().
         """

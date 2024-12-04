@@ -43,7 +43,8 @@ if __name__ == "__main__":
     ax = wakemap.plot_candidate_groups(35, ax=ax)
     fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
-    wakemap.compute_raw_expected_powers_parallel()
+    #wakemap.compute_raw_expected_powers_parallel()
+    wakemap.compute_raw_expected_powers_serial(save_in_parts=True, filename="temp")
 
     ee = wakemap.process_existing_expected_powers()
     ce = wakemap.process_candidate_expected_powers()
