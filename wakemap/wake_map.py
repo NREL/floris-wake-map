@@ -170,21 +170,17 @@ class WakeMap():
                 ))
         else:
             max_workers = self.parallel_max_workers
-        print("here", max_workers)
-        #pathos_pool = pathos.pools.ProcessPool(nodes=max_workers)
-        PoolExecutor = mp.Pool
-        print("here")
+
+        use_pathos = True # Hardcode for now. False will use multiprocessing
+        
+        if use_pathos:
+            pathos_pool = pathos.pools.ProcessPool(nodes=max_workers)
 
         # Create inputs to parallelization procedure
         parallel_inputs = []
         if self.verbose:
             print("Preparing for parallel computation.")
         for i in range(self.n_candidates):
-            # fmodel_candidate = self.fmodel_all_candidates.copy()
-            # fmodel_candidate.set(
-            #     layout_x=self.all_candidates_x[self.groups[i]],
-            #     layout_y=self.all_candidates_y[self.groups[i]]
-            # )
             parallel_inputs.append(
                 (self.fmodel_existing, self.fmodel_all_candidates, self.groups[i])
             )
@@ -192,17 +188,19 @@ class WakeMap():
         t_start = perf_counter()
         if self.verbose:
             print("Computing impact on existing via parallel computation.")
-        # self.expected_powers_existing_raw = pathos_pool.map(
-        #     lambda x: _compute_expected_powers_existing_single(*x),
-        #     parallel_inputs
-        # )
-        with mp.Pool(max_workers) as p:
-            self.expected_powers_existing_raw = p.starmap(
-                self._compute_existing_single_function,
+        if use_pathos:
+            self.expected_powers_existing_raw = pathos_pool.map(
+                lambda x: self._compute_existing_single_function(*x),
                 parallel_inputs
             )
-        # pathos_pool.close()
-        # pathos_pool.join()
+            pathos_pool.close()
+            pathos_pool.join()
+        else:
+            with mp.Pool(max_workers) as p:
+                self.expected_powers_existing_raw = p.starmap(
+                    self._compute_existing_single_function,
+                    parallel_inputs
+                )
         if self.verbose:
             print("Computation of existing farm impacts completed in",
                   "{:.1f} s.".format(perf_counter() - t_start))
