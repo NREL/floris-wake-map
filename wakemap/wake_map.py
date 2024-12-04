@@ -246,6 +246,9 @@ class WakeMap():
                 "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
             )
 
+        # TODO: How should these be averaged if there are multiple turbine types (with different rated powers?)
+        # Possibly they should be first converted into a capacity factor by dividing by the rated power. That's
+        # likely best.
         return np.mean(self.expected_powers_existing_raw, axis=1)
 
 
@@ -499,8 +502,28 @@ def _compute_expected_powers_existing_single_external_only(
     )
 
     # Get power() values for those speeds
-    # TODO: This assumes all turbines are the SAME. Should be easy enough to use each individual
-    # turbine's power curve, though.
+    turbine_types = []
+    turbine_type_names = np.array(
+        [turbine.turbine_type for turbine in fmodel_existing.core.farm.turbine_map]
+    )
+    for turbine in fmodel_existing.core.farm.turbine_map:
+        if turbine not in turbine_types:
+            turbine_types.append(turbine)
+
+    existing_powers = np.zeros_like(wind_speeds)
+    for turbine in turbine_types:
+        wind_speeds_tt = wind_speeds[:, turbine_type_names == turbine.turbine_type]
+        existing_powers_tt = turbine.power_function(
+            power_thrust_table=turbine.power_thrust_table,
+            velocities=wind_speeds_tt,
+            air_density=fmodel_existing.core.flow_field.air_density,
+            yaw_angles=np.zeros_like(wind_speeds_tt),
+            tilt_angles=np.zeros_like(wind_speeds_tt), # MAYBE NOT?
+            tilt_interp=turbine.tilt_interp,
+        )
+        # assign in positions matching tt
+        existing_powers[:, turbine_type_names == turbine.turbine_type] = existing_powers_tt
+
     existing_powers = fmodel_existing.core.farm.turbine_map[0].power_function(
         power_thrust_table=fmodel_existing.core.farm.turbine_map[0].power_thrust_table,
         velocities=wind_speeds,
