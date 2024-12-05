@@ -31,7 +31,7 @@ if __name__ == "__main__":
         wind_rose_test,
         min_dist=nm,
         group_diameter=6000,
-        bounding_box={"x_min": -10000, "x_max": 25000, "y_min": -10000, "y_max": 25000},
+        boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
         verbose=True
     )
 

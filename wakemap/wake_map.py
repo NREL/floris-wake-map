@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pathos
 import multiprocessing as mp
 from time import perf_counter
+from shapely.geometry import Polygon, Point
 
 from floris import FlorisModel, WindRose
 from floris import layout_visualization as layout_viz
@@ -23,10 +24,11 @@ class WakeMap():
         wind_rose: WindRose,
         min_dist: float | None = None,
         group_diameter: float | None = None,
-        bounding_box: Dict[str, float] | None = None,
+        boundaries: list[(float, float)] | None = None,
         candidate_turbine = "iea_15MW",
+        exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
-        external_losses_only: bool = False,
+        external_losses_only: bool = True,
         verbose: bool = False
     ):
         """
@@ -34,7 +36,7 @@ class WakeMap():
 
         Args:
             fmodel: FlorisModel object
-            wind_rose: WindRose object
+            wind_rose: WindRose object (is this needed? Could come on fmodel?)
             min_dist: Minimum distance between turbines in meters
             group_diameter: Diameter of the group of turbines in meters
             bounding_box: Dictionary of bounding box limits. Should contain keys
@@ -54,14 +56,22 @@ class WakeMap():
 
         nautical_mile = 1852 # m
 
-        if bounding_box is None:
-            bounding_box = {
-                "x_min": self.fmodel_existing.layout_x.min() - 5*nautical_mile,
-                "x_max": self.fmodel_existing.layout_x.max() + 5*nautical_mile,
-                "y_min": self.fmodel_existing.layout_y.min() - 5*nautical_mile,
-                "y_max": self.fmodel_existing.layout_y.max() + 5*nautical_mile
-            }
-        self.bounding_box = bounding_box
+        if boundaries is None:
+            boundaries = [
+                (self.fmodel_existing.layout_x.min() - 5*nautical_mile,
+                 self.fmodel_existing.layout_y.min() - 5*nautical_mile),
+                (self.fmodel_existing.layout_x.max() + 5*nautical_mile,
+                 self.fmodel_existing.layout_y.min() + 5*nautical_mile),
+                (self.fmodel_existing.layout_x.max() - 5*nautical_mile,
+                 self.fmodel_existing.layout_y.max() + 5*nautical_mile),
+                (self.fmodel_existing.layout_x.min() + 5*nautical_mile,
+                 self.fmodel_existing.layout_y.max() - 5*nautical_mile)
+            ]
+        self.boundaries = boundaries
+        self._boundary_polygon = Polygon(self.boundaries)
+        self._boundary_line = self._boundary_polygon.boundary
+
+
         self.min_dist = min_dist if min_dist is not None else nautical_mile
         self.group_diameter = group_diameter if group_diameter is not None else 3*nautical_mile
         self.create_candidate_locations()
@@ -77,27 +87,34 @@ class WakeMap():
         """
         Create a floris model with all candidate locations.
         """
+        x, y = self._boundary_polygon.exterior.coords.xy
+
         x_ = np.arange(
-            self.bounding_box["x_min"],
-            self.bounding_box["x_max"] + 0.1,
+            min(x),
+            max(x) + 0.1,
             self.min_dist
         )
         y_ = np.arange(
-            self.bounding_box["y_min"],
-            self.bounding_box["y_max"] + 0.1,
+            min(y),
+            max(y) + 0.1,
             self.min_dist
         )
 
         x, y = np.meshgrid(x_, y_)
-        xy = np.column_stack([x.flatten(), y.flatten()])
+        
+        # Find all x, y pairs that lie within the boundary polygon
+        boundary_mask = np.array([self._boundary_polygon.contains(Point(x_, y_))
+                                  for x_, y_ in zip(x.flatten(), y.flatten())])
+
+        xy = np.column_stack([x.flatten()[boundary_mask], y.flatten()[boundary_mask]])
 
         # Identify xy pairs that are within limit of any existing turbine and remove
         existing_xy = np.column_stack([self.fmodel_existing.layout_x, self.fmodel_existing.layout_y])
-        mask = np.ones(xy.shape[0], dtype=bool)
+        existing_mask = np.ones(xy.shape[0], dtype=bool)
         for i in range(existing_xy.shape[0]):
-            mask = mask & (np.linalg.norm(xy - existing_xy[i], axis=1) > self.min_dist)
-        self.all_candidates_x = xy[mask,0]
-        self.all_candidates_y = xy[mask,1]
+            existing_mask = existing_mask & (np.linalg.norm(xy - existing_xy[i], axis=1) > self.min_dist)
+        self.all_candidates_x = xy[existing_mask,0]
+        self.all_candidates_y = xy[existing_mask,1]
 
         self.fmodel_all_candidates = self.fmodel_existing.copy()
         self.fmodel_all_candidates.set(
