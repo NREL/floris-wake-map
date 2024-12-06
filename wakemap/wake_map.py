@@ -71,6 +71,10 @@ class WakeMap():
         self._boundary_polygon = Polygon(self.boundaries)
         self._boundary_line = self._boundary_polygon.boundary
 
+        self.exclusion_zones = exclusion_zones
+        self._exclusion_polygons = []
+        for ez in self.exclusion_zones:
+            self._exclusion_polygons.append(Polygon(ez))
 
         self.min_dist = min_dist if min_dist is not None else nautical_mile
         self.group_diameter = group_diameter if group_diameter is not None else 3*nautical_mile
@@ -107,6 +111,12 @@ class WakeMap():
                                   for x_, y_ in zip(x.flatten(), y.flatten())])
 
         xy = np.column_stack([x.flatten()[boundary_mask], y.flatten()[boundary_mask]])
+
+        # Remove any points that lie within the exlusion zones
+        for ez in self._exclusion_polygons:
+            exclusion_mask = np.array([not ez.contains(Point(x_, y_))
+                             for x_, y_ in zip(xy[:,0], xy[:,1])])
+            xy = xy[exclusion_mask, :]
 
         # Identify xy pairs that are within limit of any existing turbine and remove
         existing_xy = np.column_stack([self.fmodel_existing.layout_x, self.fmodel_existing.layout_y])
@@ -537,6 +547,25 @@ class WakeMap():
         )
         ax.set_xlabel("X location [m]")
         ax.set_ylabel("Y location [m]")
+
+        return ax
+    
+    def plot_exclusion_zones(
+        self,
+        ax: plt.Axes | None = None,
+        color: str = "yellow",
+        alpha: float = 0.5,
+    ):
+        """
+        Plot the exclusion zones.
+        """
+        if ax is None:
+            _, ax = plt.subplots()
+
+        for ez in self._exclusion_polygons:
+            # Plot zones with border and fill
+            ax.plot(*ez.exterior.xy, color=color)
+            ax.fill(*ez.exterior.xy, color=color, alpha=alpha)
 
         return ax
 

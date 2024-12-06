@@ -14,7 +14,7 @@ if __name__ == "__main__":
     )
     wind_rose_test.plot()
 
-    save_figs = False
+    save_figs = True
 
     value = "capacity_factor"
 
@@ -30,26 +30,30 @@ if __name__ == "__main__":
         layout_y=y_pos.flatten(),
     )
 
+    exclusion_zone = [(15000, -5000), (20000, -2000), (15000, -2000)]
+
     wakemap = WakeMap(
         fmodel,
         wind_rose_test,
         min_dist=nm,
         group_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
+        exclusion_zones=[exclusion_zone],
         external_losses_only=True,
         verbose=True
     )
 
     ax = wakemap.plot_existing_farm()
+    ax = wakemap.plot_exclusion_zones(ax=ax)
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/layouts_ex_excl.png", dpi=300, bbox_inches="tight", format="png")
     ax = wakemap.plot_candidate_locations(ax=ax)
     if save_figs:
-        fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/layouts_can_excl.png", dpi=300, bbox_inches="tight", format="png")
     ax = wakemap.plot_candidate_groups(35, ax=ax)
     if save_figs:
-        fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/layouts_groups_excl.png", dpi=300, bbox_inches="tight", format="png")
 
     wakemap.compute_raw_expected_powers_parallel()
 
@@ -60,19 +64,21 @@ if __name__ == "__main__":
     ax = wakemap.plot_candidate_value(value=value)
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wakemap.plot_exclusion_zones(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig("figs/candidate_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/candidate_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
     ax = wakemap.plot_existing_value(value=value)
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wakemap.plot_exclusion_zones(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig("figs/existing_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/existing_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map, subset (as for full map).
     subset=range(10)
@@ -83,9 +89,10 @@ if __name__ == "__main__":
     ax = wakemap.plot_existing_farm(ax=ax)
     ax = wakemap.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
     ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wakemap.plot_exclusion_zones(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig("figs/subset_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/subset_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png")
 
     plt.show()
