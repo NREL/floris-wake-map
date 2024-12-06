@@ -342,7 +342,7 @@ class WakeMap():
         Average over all turbines in subset for each candidate.
         """
         self.certify_solved()
-        self.certify_solved()
+
         rated_powers = np.array(
             [turbine.power_thrust_table["power"].max()
              for turbine in np.array(self.fmodel_all_candidates.core.farm.turbine_map)[subset]]
