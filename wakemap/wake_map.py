@@ -87,6 +87,22 @@ class WakeMap():
             else _compute_expected_powers_existing_single
         )
 
+        self._solved = False
+
+    @property
+    def solved(self):
+        return self._solved
+    
+    def certify_solved(self):
+        if not self.solved:
+            raise AttributeError(
+                "FLORIS powers have not yet been computed. Please run"
+                "compute_raw_expected_powers_serial() or "
+                "compute_raw_expected_powers_parallel() first."
+            )
+        else:
+            return None
+
     def create_candidate_locations(self):
         """
         Create a floris model with all candidate locations.
@@ -184,6 +200,8 @@ class WakeMap():
             print("Computing impact on candidates.")
         self.compute_expected_powers_candidates()
 
+        self._solved = True
+
     def compute_raw_expected_powers_parallel(self):
         """
         Compute the turbine expected power for each candidate group; as well as for the existing
@@ -236,6 +254,8 @@ class WakeMap():
             print("Computing impact on candidates.")
         self.compute_expected_powers_candidates()
 
+        self._solved = True
+
     def compute_expected_powers_candidates(self):
         """
         Compute expected power for candidates, based on FlorisModel.sample_flow_at_points().
@@ -266,10 +286,7 @@ class WakeMap():
         """
         Average over all existing turbines for each candidate.
         """
-        if not hasattr(self, "expected_powers_existing_raw"):
-            raise AttributeError(
-                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
-            )
+        self.certify_solved()
 
         return np.mean(self.expected_powers_existing_raw, axis=1)
 
@@ -279,10 +296,7 @@ class WakeMap():
         Is this doing anything? If so, what? Should it be? Maybe still useful?
         For now, just return the raw singular powers
         """
-        if not hasattr(self, "expected_powers_candidates_raw"):
-            raise AttributeError(
-                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
-            )
+        self.certify_solved()
 
         # combined_powers = np.full((self.n_candidates, self.n_candidates), np.nan)
         # for i, g in enumerate(self.groups):
@@ -295,10 +309,7 @@ class WakeMap():
         """
         Average over all turbines in subset for each candidate.
         """
-        if not hasattr(self, "expected_powers_existing_raw"):
-            raise AttributeError(
-                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
-            )
+        self.certify_solved()
 
         return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
     
@@ -306,10 +317,7 @@ class WakeMap():
         """
         Average over all existing turbines for each candidate.
         """
-        if not hasattr(self, "expected_powers_existing_raw"):
-            raise AttributeError(
-                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
-            )
+        self.certify_solved()
 
         rated_powers = np.array(
             [turbine.power_thrust_table["power"].max()
@@ -321,10 +329,7 @@ class WakeMap():
     def process_candidate_expected_capacity_factors(self):
         """
         """
-        if not hasattr(self, "expected_powers_candidates_raw"):
-            raise AttributeError(
-                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
-            )
+        self.certify_solved()
 
         # Only type of candidate turbine
         rated_power = self.fmodel_all_candidates.core.farm.turbine_map[0]\
@@ -336,10 +341,8 @@ class WakeMap():
         """
         Average over all turbines in subset for each candidate.
         """
-        if not hasattr(self, "expected_powers_existing_raw"):
-            raise AttributeError(
-                "FLORIS powers have not yet been computed. Please run compute_expected_powers()."
-            )
+        self.certify_solved()
+        self.certify_solved()
         rated_powers = np.array(
             [turbine.power_thrust_table["power"].max()
              for turbine in np.array(self.fmodel_all_candidates.core.farm.turbine_map)[subset]]
