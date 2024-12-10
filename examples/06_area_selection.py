@@ -70,20 +70,31 @@ if __name__ == "__main__":
 
     # Make some nice plots
     # Candidate map
-    ax = wake_map.plot_candidate_value(value=value)
-    ax.set_aspect("equal")
-    ax = wake_map.plot_existing_farm(ax=ax)
-    ax = wake_map.plot_candidate_locations(ax=ax)
-    ax = wake_map.plot_exclusion_zones(ax=ax)
-    ax = area_selector.plot_selection(ax=ax)
+    ax_c = wake_map.plot_candidate_value(value=value)
+    ax_c.set_aspect("equal")
+    ax_c = wake_map.plot_existing_farm(ax=ax_c)
+    ax_c = wake_map.plot_candidate_locations(ax=ax_c)
+    ax_c = wake_map.plot_exclusion_zones(ax=ax_c)
+    ax_c = area_selector.plot_selection(ax=ax_c)
     
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
-    ax = wake_map.plot_existing_value(value=value)
-    ax.set_aspect("equal")
-    ax = wake_map.plot_existing_farm(ax=ax)
-    ax = wake_map.plot_candidate_locations(ax=ax)
-    ax = wake_map.plot_exclusion_zones(ax=ax)
-    ax = area_selector.plot_selection(ax=ax)
+    ax_e = wake_map.plot_existing_value(value=value)
+    ax_e.set_aspect("equal")
+    ax_e = wake_map.plot_existing_farm(ax=ax_e)
+    ax_e = wake_map.plot_candidate_locations(ax=ax_e)
+    ax_e = wake_map.plot_exclusion_zones(ax=ax_e)
+    ax_e = area_selector.plot_selection(ax=ax_e)
+
+    area_selector.add_objective({
+        "value": value,
+        "candidates_weight": 0.5,
+        "existing_weight": 0.5,
+        "n_target": 10
+    })
+
+    area_selector.select_candidates()
+    ax_c = area_selector.plot_selection(ax=ax_c, plotting_dict={"color": "blue"})
+    ax_e = area_selector.plot_selection(ax=ax_e, plotting_dict={"color": "blue"})
 
 
     plt.show()

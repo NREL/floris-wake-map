@@ -33,6 +33,7 @@ class AreaSelector():
         self.verbose = verbose
 
         self.reset_constraints()
+        self.reset_objective()
 
         self._state = 0 # Initialized
 
@@ -118,6 +119,37 @@ class AreaSelector():
 
         return
     
+    def add_objective(self, objective_dict):
+        # TODO: add this in
+        self._state = 1 # Objective added, selection can proceed
+
+        required_keys = ["value", "candidates_weight", "existing_weight", "n_target"]
+
+        # Check that all inputs are valid
+        if not all([key in objective_dict for key in required_keys]):
+            raise ValueError("Objective dictionary must contain keys: {0}".format(required_keys))
+        
+        for key in ["candidates_weight", "existing_weight"]:
+            if not isinstance(objective_dict[key], (int, float)):
+                raise ValueError("Objective dictionary key '{0}' must be a number.".format(key))
+            
+        # TODO: handle subsets
+        self._objective_dict = objective_dict
+
+        self._state = 1 # Objective added, selection can proceed
+
+    def reset_objective(self):
+        self._objective_dict = {}
+
+    def report_objective(self):
+        if self._objective_dict == {}:
+            print("No objective has been added.\n")
+            return
+
+        print("Objective: {0}".format(self._objective_dict))
+
+        return
+
     def select_candidates(self):
         if self._state != 1:
             raise RuntimeError(
@@ -137,12 +169,30 @@ class AreaSelector():
                 len(self._selected_candidates_x)/len(self._allowable_candidates_x)*100
             ))
 
-        # Will handle the objective soon; for now, only handles constraints.
-        self._state = 2 # Candidates selected
+        if self._objective_dict != {}:
+            if self._objective_dict["n_target"] > len(self._selected_candidates_x):
+                raise ValueError("Target number of turbines do not satisfy constraints.")
 
-    def add_objective(self, ):
-        # TODO: add this in
-        self._state = 1 # Objective added, selection can proceed
+            if self._objective_dict["value"] == "power":
+                v_c = self.wake_map.process_candidate_expected_powers()
+                v_e = self.wake_map.process_existing_expected_powers()
+            elif self._objective_dict["value"] == "capacity_factor":
+                v_c = self.wake_map.process_candidate_expected_capacity_factors()
+                v_e = self.wake_map.process_existing_expected_capacity_factors()
+            
+            v_both = (
+                self._objective_dict["candidates_weight"]*v_c
+                + self._objective_dict["existing_weight"]*v_e
+            )
+
+            v_both = v_both[mask_all]
+
+            best_indices = np.argsort(v_both)[::-1][:self._objective_dict["n_target"]]
+
+            self._selected_candidates_x = self._selected_candidates_x[best_indices]
+            self._selected_candidates_y = self._selected_candidates_y[best_indices]
+
+        self._state = 2 # Candidates selected
 
     def plot_selection(
         self,
