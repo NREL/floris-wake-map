@@ -5,6 +5,7 @@ from typing import (
 
 import numpy as np
 import matplotlib.pyplot as plt
+import logging
 import pathos
 import multiprocessing as mp
 from time import perf_counter
@@ -29,7 +30,8 @@ class WakeMap():
         exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
         external_losses_only: bool = True,
-        verbose: bool = False
+        verbose: bool = True,
+        silence_floris_warnings: bool = False,
     ):
         """
         Initialize the WakeMap object.
@@ -53,6 +55,14 @@ class WakeMap():
 
         self.fmodel_existing = fmodel
         self.fmodel_existing.set(wind_data=wind_rose)
+
+        if silence_floris_warnings:
+            logger = logging.getLogger(name="floris")
+            console_handler = logging.StreamHandler()
+            logger.removeHandler(console_handler)
+            #floris_dict = self.fmodel_existing.core.as_dict()
+            #floris_dict["logging"]["console"]["enable"] = False
+            #self.fmodel_existing = FlorisModel.from_dict(floris_dict)
 
         nautical_mile = 1852 # m
 
@@ -369,6 +379,7 @@ class WakeMap():
         data = np.load(filename)
         self.expected_powers_existing_raw = data["expected_powers_existing_raw"]
         self.expected_powers_candidates_raw = data["expected_powers_candidates_raw"]
+        self._solved = True
         if self.verbose:
             print("Data loaded.")
 
@@ -548,6 +559,7 @@ class WakeMap():
             np.ones_like(self.fmodel_existing.layout_x),
             colors="white",
         )
+        # TODO: Try using some sort of boundary fill instead? 
         ax.set_xlabel("X location [m]")
         ax.set_ylabel("Y location [m]")
 
@@ -569,6 +581,23 @@ class WakeMap():
             # Plot zones with border and fill
             ax.plot(*ez.exterior.xy, color=color)
             ax.fill(*ez.exterior.xy, color=color, alpha=alpha)
+
+        return ax
+
+    def plot_candidate_boundary(
+        self,
+        ax: plt.Axes | None = None,
+        color: str = "black",
+        alpha: float = 0.2,
+    ):
+        """
+        Plot the boundary.
+        """
+        if ax is None:
+            _, ax = plt.subplots()
+
+        ax.plot(*self._boundary_line.xy, color=color)
+        ax.fill(*self._boundary_polygon.exterior.xy, color=color, alpha=alpha)
 
         return ax
 
