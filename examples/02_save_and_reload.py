@@ -14,7 +14,7 @@ wind_rose_test = WindRose(
 )
 wind_rose_test.plot()
 
-fmodel = FlorisModel("gch.yaml")
+fmodel = FlorisModel("inputs/gch.yaml")
 fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
 nm = 1852
 x_pos = np.linspace(0, 9*nm, 10)
@@ -26,7 +26,7 @@ fmodel.set(
     layout_y=y_pos.flatten(),
 )
 
-wakemap = WakeMap(
+wake_map = WakeMap(
     fmodel,
     wind_rose_test,
     min_dist=nm,
@@ -35,14 +35,14 @@ wakemap = WakeMap(
     verbose=True
 )
 
-wakemap.compute_raw_expected_powers_parallel()
-print(wakemap.expected_powers_candidates_raw.shape)
+wake_map.compute_raw_expected_powers_parallel()
+print(wake_map.expected_powers_candidates_raw.shape)
 filename = "test_raw_expected_powers.npz"
-wakemap.save_raw_expected_powers(filename)
+wake_map.save_raw_expected_powers(filename)
 
-wakemap.expected_powers_candidates_raw = None
-wakemap.expected_powers_existing_raw = None
+wake_map.expected_powers_candidates_raw = None
+wake_map.expected_powers_existing_raw = None
 
-wakemap.load_raw_expected_powers(filename)
+wake_map.load_raw_expected_powers(filename)
 
-print(wakemap.expected_powers_candidates_raw.shape)
+print(wake_map.expected_powers_candidates_raw.shape)

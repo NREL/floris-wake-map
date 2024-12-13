@@ -7,7 +7,7 @@ from floris import FlorisModel
 from wakemap import WakeMap
 
 if __name__ == "__main__":
-    with open("/Users/msinner/cluster-wakes_JIP/cw_jip/analysis/wind_rose_vineyard.pkl", "rb") as f:
+    with open("../../cw_jip/analysis/wind_rose_vineyard.pkl", "rb") as f:
         wind_rose_vyw = pickle.load(f)
         wind_rose_vyw.heterogeneous_map = None
     wind_rose_vyw.plot()
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     fig.savefig("figs/vyw_windrose_full.png", dpi=300, bbox_inches="tight", format="png")
 
 
-    fmodel = FlorisModel("gch.yaml")
+    fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
     nm = 1852
     x_pos = np.linspace(0, 9*nm, 10)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     print("Conditions in wind rose:", wind_rose_vyw.n_findex)
     print("Turbines in domain:", len(fmodel.layout_x))
 
-    wakemap = WakeMap(
+    wake_map = WakeMap(
         fmodel,
         wind_rose_vyw,
         min_dist=nm,
@@ -42,30 +42,30 @@ if __name__ == "__main__":
         verbose=True
     )
 
-    ax = wakemap.plot_existing_farm()
+    ax = wake_map.plot_existing_farm()
     fig = ax.get_figure()
     fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_candidate_locations(ax=ax)
     fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wakemap.plot_candidate_groups(35, ax=ax)
+    ax = wake_map.plot_candidate_groups(35, ax=ax)
     fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
-    wakemap.load_raw_expected_powers("raw_expected_powers_vywr_full.npz")
-    ee = wakemap.process_existing_expected_powers()
-    ce = wakemap.process_candidate_expected_powers()
+    wake_map.load_raw_expected_powers("raw_expected_powers_vywr_full.npz")
+    ee = wake_map.process_existing_expected_powers()
+    ce = wake_map.process_candidate_expected_powers()
 
     # Candidate map (identical, as expected)
-    ax = wakemap.plot_candidate_value(value="capacity_factor")
-    ax = wakemap.plot_existing_farm(ax=ax)
-    ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_candidate_value(value="capacity_factor")
+    ax = wake_map.plot_existing_farm(ax=ax)
+    ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     fig.savefig("figs/candidate_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
-    ax = wakemap.plot_existing_value(value="capacity_factor")
-    ax = wakemap.plot_existing_farm(ax=ax)
-    ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_existing_value(value="capacity_factor")
+    ax = wake_map.plot_existing_farm(ax=ax)
+    ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     fig.savefig("figs/existing_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
@@ -79,13 +79,13 @@ if __name__ == "__main__":
     subset_4 = subset_2 + subset_3
     subsets = [subset_0, subset_1, subset_2, subset_3, subset_4]
     for s, subset in enumerate(subsets):
-        es = wakemap.process_existing_expected_capacity_factors_subset(subset=subset)
-        ax = wakemap.plot_contour(
+        es = wake_map.process_existing_expected_capacity_factors_subset(subset=subset)
+        ax = wake_map.plot_contour(
             es, cmap="Blues", colorbar_label="Subset turbine capacity factor [-]"
         )
-        ax = wakemap.plot_existing_farm(ax=ax)
-        ax = wakemap.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
-        ax = wakemap.plot_candidate_locations(ax=ax)
+        ax = wake_map.plot_existing_farm(ax=ax)
+        ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
+        ax = wake_map.plot_candidate_locations(ax=ax)
         ax.set_aspect("equal")
         fig = ax.get_figure()
         fig.savefig("figs/subset_{0}_power_map_extonly_vywr_full.png".format(s), dpi=300, bbox_inches="tight", format="png")

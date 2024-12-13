@@ -14,7 +14,7 @@ if __name__ == "__main__":
     )
     wind_rose_test.plot()
 
-    fmodel = FlorisModel("gch.yaml")
+    fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
     nm = 1852
     x_pos = np.linspace(0, 9*nm, 10)
@@ -26,7 +26,7 @@ if __name__ == "__main__":
         layout_y=y_pos.flatten(),
     )
 
-    wakemap = WakeMap(
+    wake_map = WakeMap(
         fmodel,
         wind_rose_test,
         min_dist=nm,
@@ -35,44 +35,44 @@ if __name__ == "__main__":
         verbose=True
     )
 
-    ax = wakemap.plot_existing_farm()
+    ax = wake_map.plot_existing_farm()
     fig = ax.get_figure()
     fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_candidate_locations(ax=ax)
     fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wakemap.plot_candidate_groups(35, ax=ax)
+    ax = wake_map.plot_candidate_groups(35, ax=ax)
     fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
-    wakemap.compute_raw_expected_powers_serial()
+    wake_map.compute_raw_expected_powers_serial()
 
-    ee = wakemap.process_existing_expected_powers()
-    ce = wakemap.process_candidate_expected_powers()
+    ee = wake_map.process_existing_expected_powers()
+    ce = wake_map.process_candidate_expected_powers()
 
     # Candidate map
-    ax = wakemap.plot_candidate_value(value="power", normalizer=1e6)
-    ax = wakemap.plot_existing_farm(ax=ax)
-    ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_candidate_value(value="power", normalizer=1e6)
+    ax = wake_map.plot_existing_farm(ax=ax)
+    ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map
-    ax = wakemap.plot_existing_value(value="power", normalizer=1e6)
-    ax = wakemap.plot_existing_farm(ax=ax)
-    ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_existing_value(value="power", normalizer=1e6)
+    ax = wake_map.plot_existing_farm(ax=ax)
+    ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     fig.savefig("figs/existing_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map, subset
     subset=range(10)
-    es = wakemap.process_existing_expected_powers_subset(subset=subset)
-    ax = wakemap.plot_contour(
+    es = wake_map.process_existing_expected_powers_subset(subset=subset)
+    ax = wake_map.plot_contour(
         es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine power [MW]"
     )
-    ax = wakemap.plot_existing_farm(ax=ax)
-    ax = wakemap.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
-    ax = wakemap.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_existing_farm(ax=ax)
+    ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
+    ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
     fig.savefig("figs/subset_power_map.png", dpi=300, bbox_inches="tight", format="png")
