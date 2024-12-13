@@ -187,6 +187,9 @@ class AreaSelector():
             elif self._objective_dict["value"] == "capacity_factor":
                 v_c = self.wake_map.process_candidate_expected_capacity_factors()
                 v_e = self.wake_map.process_existing_expected_capacity_factors()
+            elif self._objective_dict["value"] == "normalized_power":
+                v_c = self.wake_map.process_candidate_expected_normalized_powers()
+                v_e = self.wake_map.process_existing_expected_normalized_powers()
             
             v_both = (
                 self._objective_dict["candidates_weight"]*v_c
