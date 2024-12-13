@@ -360,6 +360,54 @@ class WakeMap():
 
         return np.mean(np.array(self.expected_powers_existing_raw)[:, subset]/rated_powers, axis=1)
 
+    def process_existing_expected_normalized_powers(self):
+        """
+        Average normalized power including (external or combined) wake loss.
+        """
+        self.certify_solved()
+
+        # Run a no wake calculation for the existing turbines
+        self.fmodel_existing.run_no_wake()
+        no_wake_expected_powers = self.fmodel_existing.get_expected_turbine_powers()
+        normalized_expected_powers = (
+            np.array(self.expected_powers_existing_raw)
+            / no_wake_expected_powers.reshape(1,-1)
+        )
+
+        return np.mean(normalized_expected_powers, axis=1)
+    
+    def process_candidate_expected_normalized_powers(self):
+        """
+        Average normalized power including (external or combined) wake loss.
+        """
+        self.certify_solved()
+
+        # Run a no wake calculation for the candidate
+        self.fmodel_all_candidates.run_no_wake()
+        no_wake_expected_powers = self.fmodel_all_candidates.get_expected_turbine_powers()
+        normalized_expected_powers = (
+            np.array(self.expected_powers_candidates_raw)
+            / no_wake_expected_powers
+        )
+
+        return normalized_expected_powers
+
+    def process_existing_expected_normalized_powers_subset(self, subset: list):
+        """
+        Average normalized power including (external or combined) wake loss.
+        """
+        self.certify_solved()
+
+        # Run a no wake calculation for the existing turbines
+        self.fmodel_existing.run_no_wake()
+        no_wake_expected_powers = self.fmodel_existing.get_expected_turbine_powers()
+        normalized_expected_powers = (
+            np.array(self.expected_powers_existing_raw)[:, subset]
+            / no_wake_expected_powers[subset].reshape(1,-1)
+        )
+
+        return np.mean(normalized_expected_powers, axis=1)
+
     def save_raw_expected_powers(self, filename: str):
         """
         Save the raw expected powers to a file.
@@ -404,7 +452,10 @@ class WakeMap():
         if subset is not None:
             fmodel_plot.set(
                 layout_x=self.fmodel_existing.layout_x[subset],
-                layout_y=self.fmodel_existing.layout_y[subset]
+                layout_y=self.fmodel_existing.layout_y[subset],
+                turbine_type=(
+                    np.array(self.fmodel_existing.core.farm.turbine_definitions)[subset]
+                ).tolist(),
             )
 
         layout_viz.plot_turbine_points(fmodel_plot, ax=ax, plotting_dict=plotting_dict)
@@ -478,17 +529,27 @@ class WakeMap():
         value: str = "power",
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
-        colorbar_label: str = "Existing turbine power [MW]"
+        colorbar_label: str | None = None,
     ):
         """
         Plot the expected powers of the existing farm.
         """
         if value == "power":
             plot_variable = self.process_existing_expected_powers()
+            if colorbar_label is None:
+                colorbar_label = "Existing turbine power [MW]"
         elif value == "capacity_factor":
             plot_variable = self.process_existing_expected_capacity_factors()
+            if colorbar_label is None:
+                colorbar_label = "Existing turbine capacity factor [-]"
+        elif value == "normalized_power":
+            plot_variable = self.process_existing_expected_normalized_powers()
+            if colorbar_label is None:
+                colorbar_label = "Existing turbine normalized power [-]"
         else:
-            raise ValueError("Invalid type. Must be 'power' or 'capacity_factor'.")
+            raise ValueError(
+                "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
+            )
         
         return self.plot_contour(
             plot_variable,
@@ -516,8 +577,14 @@ class WakeMap():
             plot_variable = self.process_candidate_expected_capacity_factors()
             if colorbar_label is None:
                 colorbar_label = "Candidate turbine capacity factor [-]"
+        elif value == "normalized_power":
+            plot_variable = self.process_candidate_expected_normalized_powers()
+            if colorbar_label is None:
+                colorbar_label = "Candidate turbine normalized power [-]"
         else:
-            raise ValueError("Invalid type. Must be 'power' or 'capacity_factor'.")
+            raise ValueError(
+                "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
+            )
         
         return self.plot_contour(
             plot_variable,
@@ -553,13 +620,9 @@ class WakeMap():
         cbar.set_label(colorbar_label)
 
         # Cover the area of the existing farm with white
-        ax.tricontourf(
-            self.fmodel_existing.layout_x,
-            self.fmodel_existing.layout_y,
-            np.ones_like(self.fmodel_existing.layout_x),
-            colors="white",
-        )
-        # TODO: Try using some sort of boundary fill instead? 
+        for x, y in zip(self.fmodel_existing.layout_x, self.fmodel_existing.layout_y):
+           ax.add_artist(plt.Circle((x, y), self.min_dist, color="white"))
+
         ax.set_xlabel("X location [m]")
         ax.set_ylabel("Y location [m]")
 

@@ -77,6 +77,10 @@ class AreaSelector():
                     v = self.wake_map.process_existing_expected_capacity_factors_subset(
                         subset=constraint_dict["subset"]
                     )
+                elif constraint_dict["value"] == "normalized_power":
+                    v = self.wake_map.process_existing_expected_normalized_powers_subset(
+                        subset=constraint_dict["subset"]
+                    )
                 else:
                     # Should already have checked, so this shouldn't happen.
                     raise ValueError("Invalid value for constraint_dict['value']")
@@ -85,6 +89,8 @@ class AreaSelector():
                     v = self.wake_map.process_existing_expected_powers()
                 elif constraint_dict["value"] == "capacity_factor":
                     v = self.wake_map.process_existing_expected_capacity_factors()
+                elif constraint_dict["value"] == "normalized_power":
+                    v = self.wake_map.process_existing_expected_normalized_powers()
                 else:
                     # Should already have checked, so this shouldn't happen.
                     raise ValueError("Invalid value for constraint_dict['value']")
@@ -93,6 +99,8 @@ class AreaSelector():
                 v = self.wake_map.process_candidate_expected_powers()
             elif constraint_dict["value"] == "capacity_factor":
                 v = self.wake_map.process_candidate_expected_capacity_factors()
+            elif constraint_dict["value"] == "normalized_power":
+                v = self.wake_map.process_candidate_expected_normalized_powers()
             else:
                 # Should already have checked, so this shouldn't happen.
                 raise ValueError("Invalid value for constraint_dict['value']")
