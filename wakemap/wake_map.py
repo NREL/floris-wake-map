@@ -494,7 +494,7 @@ class WakeMap():
 
         return ax
 
-    def plot_candidate_groups(
+    def plot_candidate_layout(
         self,
         candidate_idx: int,
         ax: plt.Axes | None = None,
@@ -503,7 +503,6 @@ class WakeMap():
         """
         Plot the groups that the candidate belongs to.
         """
-        raise NotImplementedError("This method needs to be updated for new candidate approach.")
         if ax is None:
             _, ax = plt.subplots()
 
@@ -515,19 +514,14 @@ class WakeMap():
             color="red"
         )
 
-        plotting_dict["facecolor"] = "red"
-        plotting_dict["alpha"] = 0.2
-        plotting_dict["edgecolor"] = "None"
-        
-        for idx_c in range(self.n_candidates):
-            if candidate_idx in self.groups[idx_c]:
-                # Plot a filled circle centering on the idx_c location
-                circle = plt.Circle(
-                    (self.all_candidates_x[idx_c], self.all_candidates_y[idx_c]),
-                    self.group_diameter/2,
-                    **plotting_dict
-                )
-                ax.add_patch(circle)
+        ax.scatter(
+            self.all_candidates_x[candidate_idx] + self.candidate_layout[:, 0],
+            self.all_candidates_y[candidate_idx] + self.candidate_layout[:, 1],
+            marker=".",
+            s=100,
+            color="red",
+            alpha=0.8
+        )
 
         return ax
 
@@ -676,15 +670,15 @@ def _compute_expected_powers_existing_single(
     fmodel_existing,
     fmodel_candidates_all,
     candidate_layout,
-    central_candidate
+    candidate_idx
 ):
     """
     Compute the expected power for a single candidate group.
     """
     fmodel_candidate = fmodel_candidates_all.copy()
     fmodel_candidate.set(
-        layout_x=fmodel_candidates_all.layout_x[central_candidate] + candidate_layout[:, 0],
-        layout_y=fmodel_candidates_all.layout_y[central_candidate] + candidate_layout[:, 1],
+        layout_x=fmodel_candidates_all.layout_x[candidate_idx] + candidate_layout[:, 0],
+        layout_y=fmodel_candidates_all.layout_y[candidate_idx] + candidate_layout[:, 1],
     )
     fmodel_both = FlorisModel.merge_floris_models([fmodel_existing, fmodel_candidate])
     fmodel_both.set(wind_data=fmodel_existing.wind_data)
@@ -696,7 +690,7 @@ def _compute_expected_powers_existing_single_external_only(
     fmodel_existing,
     fmodel_candidates_all,
     candidate_layout,
-    central_candidate
+    candidate_idx
 ):
     """
     Compute the expected power for a single candidate group, but only considering external turbines.
@@ -704,8 +698,8 @@ def _compute_expected_powers_existing_single_external_only(
 
     fmodel_candidate = fmodel_candidates_all.copy()
     fmodel_candidate.set(
-        layout_x=fmodel_candidates_all.layout_x[central_candidate] + candidate_layout[:, 0],
-        layout_y=fmodel_candidates_all.layout_y[central_candidate] + candidate_layout[:, 1],
+        layout_x=fmodel_candidates_all.layout_x[candidate_idx] + candidate_layout[:, 0],
+        layout_y=fmodel_candidates_all.layout_y[candidate_idx] + candidate_layout[:, 1],
         wind_data=fmodel_existing.wind_data
     )
 
