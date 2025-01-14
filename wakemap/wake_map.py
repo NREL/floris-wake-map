@@ -27,6 +27,7 @@ class WakeMap():
         group_diameter: float | None = None,
         boundaries: list[(float, float)] | None = None,
         candidate_turbine = "iea_15MW",
+        candidate_layout: np.typing.NDArray | None = None,
         exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
         external_losses_only: bool = True,
@@ -44,6 +45,9 @@ class WakeMap():
             bounding_box: Dictionary of bounding box limits. Should contain keys
                 "x_min", "x_max", "y_min", "y_max"
             candidate_turbine: Turbine type to use for candidate turbines
+            candidate_layout: Layout of candidate turbines for group calculation. Should
+                by a 2D numpy array with shape (n_group, 2). If None, will use a circle
+                of diameter group_diameter to define the layout.
             parallel_max_workers: Maximum number of workers for parallel computation
             external_losses_only: Flag to compute only the external losses for existing turbines.
                 This speeds up computation.
@@ -64,18 +68,18 @@ class WakeMap():
             #floris_dict["logging"]["console"]["enable"] = False
             #self.fmodel_existing = FlorisModel.from_dict(floris_dict)
 
-        nautical_mile = 1852 # m
+        self._nautical_mile = 1852 # m
 
         if boundaries is None:
             boundaries = [
-                (self.fmodel_existing.layout_x.min() - 5*nautical_mile,
-                 self.fmodel_existing.layout_y.min() - 5*nautical_mile),
-                (self.fmodel_existing.layout_x.max() + 5*nautical_mile,
-                 self.fmodel_existing.layout_y.min() + 5*nautical_mile),
-                (self.fmodel_existing.layout_x.max() - 5*nautical_mile,
-                 self.fmodel_existing.layout_y.max() + 5*nautical_mile),
-                (self.fmodel_existing.layout_x.min() + 5*nautical_mile,
-                 self.fmodel_existing.layout_y.max() - 5*nautical_mile)
+                (self.fmodel_existing.layout_x.min() - 5*self._nautical_mile,
+                 self.fmodel_existing.layout_y.min() - 5*self._nautical_mile),
+                (self.fmodel_existing.layout_x.max() + 5*self._nautical_mile,
+                 self.fmodel_existing.layout_y.min() + 5*self._nautical_mile),
+                (self.fmodel_existing.layout_x.max() - 5*self._nautical_mile,
+                 self.fmodel_existing.layout_y.max() + 5*self._nautical_mile),
+                (self.fmodel_existing.layout_x.min() + 5*self._nautical_mile,
+                 self.fmodel_existing.layout_y.max() - 5*self._nautical_mile)
             ]
         self.boundaries = boundaries
         self._boundary_polygon = Polygon(self.boundaries)
@@ -86,11 +90,11 @@ class WakeMap():
         for ez in self.exclusion_zones:
             self._exclusion_polygons.append(Polygon(ez))
 
-        self.min_dist = min_dist if min_dist is not None else nautical_mile
-        self.group_diameter = group_diameter if group_diameter is not None else 3*nautical_mile
+        self.min_dist = min_dist if min_dist is not None else self._nautical_mile
         self.create_candidate_locations()
 
-        self.create_candidate_groups()
+        # Create candidate group layout
+        self.create_candidate_groups(group_diameter, candidate_layout)
 
         self._compute_existing_single_function = (
             _compute_expected_powers_existing_single_external_only if external_losses_only
@@ -163,18 +167,24 @@ class WakeMap():
         if self.verbose:
             print(self.n_candidates, "candidate turbine positions created.")
 
-    def create_candidate_groups(self):
+    def create_candidate_groups(self, group_diameter, candidate_layout):
         """
         Create turbine candidate groups.
         """
-        self.groups = []
-        for i in range(self.n_candidates):
-            xy = np.array([self.all_candidates_x[i], self.all_candidates_y[i]])
-            mask = np.linalg.norm(
-                xy - np.column_stack([self.all_candidates_x, self.all_candidates_y]),
-                axis=1
-            ) <= self.group_diameter/2
-            self.groups.append(np.where(mask)[0])
+        # Check only group_diameter or candidate_group are provided
+        if group_diameter is None:
+            group_diameter = 3*self._nautical_mile
+        
+        # Disregard group_diameter if candidate_group supplied
+        if candidate_layout is None:
+            x = np.arange(0, group_diameter, self.min_dist)
+            x, y = np.meshgrid(x, x)
+            xy = np.array([x.flatten(), y.flatten()]).T
+            mask = np.linalg.norm(xy-xy.mean(axis=0, keepdims=True), axis=1) <= group_diameter/2
+            candidate_layout = xy[mask,:]
+
+            
+        self.candidate_layout = candidate_layout - candidate_layout.mean(axis=0, keepdims=True)
 
     def compute_raw_expected_powers_serial(self, save_in_parts=False, filename=None):
         """
@@ -194,7 +204,8 @@ class WakeMap():
             Epower_existing = self._compute_existing_single_function(
                 self.fmodel_existing,
                 self.fmodel_all_candidates,
-                self.groups[i]
+                self.candidate_layout,
+                i
             )
             self.expected_powers_existing_raw.append(Epower_existing)
 
@@ -237,7 +248,7 @@ class WakeMap():
             print("Preparing for parallel computation.")
         for i in range(self.n_candidates):
             parallel_inputs.append(
-                (self.fmodel_existing, self.fmodel_all_candidates, self.groups[i])
+                (self.fmodel_existing, self.fmodel_all_candidates, self.candidate_layout, i)
             )
 
         t_start = perf_counter()
@@ -308,11 +319,6 @@ class WakeMap():
         """
         self.certify_solved()
 
-        # combined_powers = np.full((self.n_candidates, self.n_candidates), np.nan)
-        # for i, g in enumerate(self.groups):
-        #     combined_powers[i, g] = self.expected_powers_candidates_raw[i]
-
-        # return np.nanmean(combined_powers, axis=0)
         return self.expected_powers_candidates_raw
 
     def process_existing_expected_powers_subset(self, subset: list):
@@ -497,6 +503,7 @@ class WakeMap():
         """
         Plot the groups that the candidate belongs to.
         """
+        raise NotImplementedError("This method needs to be updated for new candidate approach.")
         if ax is None:
             _, ax = plt.subplots()
 
@@ -665,14 +672,19 @@ class WakeMap():
         return ax
 
 #### HELPER FUNCTIONS
-def _compute_expected_powers_existing_single(fmodel_existing, fmodel_candidates_all, group):
+def _compute_expected_powers_existing_single(
+    fmodel_existing,
+    fmodel_candidates_all,
+    candidate_layout,
+    central_candidate
+):
     """
     Compute the expected power for a single candidate group.
     """
     fmodel_candidate = fmodel_candidates_all.copy()
     fmodel_candidate.set(
-        layout_x=fmodel_candidates_all.layout_x[group],
-        layout_y=fmodel_candidates_all.layout_y[group]
+        layout_x=fmodel_candidates_all.layout_x[central_candidate] + candidate_layout[:, 0],
+        layout_y=fmodel_candidates_all.layout_y[central_candidate] + candidate_layout[:, 1],
     )
     fmodel_both = FlorisModel.merge_floris_models([fmodel_existing, fmodel_candidate])
     fmodel_both.set(wind_data=fmodel_existing.wind_data)
@@ -683,7 +695,8 @@ def _compute_expected_powers_existing_single(fmodel_existing, fmodel_candidates_
 def _compute_expected_powers_existing_single_external_only(
     fmodel_existing,
     fmodel_candidates_all,
-    group
+    candidate_layout,
+    central_candidate
 ):
     """
     Compute the expected power for a single candidate group, but only considering external turbines.
@@ -691,8 +704,8 @@ def _compute_expected_powers_existing_single_external_only(
 
     fmodel_candidate = fmodel_candidates_all.copy()
     fmodel_candidate.set(
-        layout_x=fmodel_candidates_all.layout_x[group],
-        layout_y=fmodel_candidates_all.layout_y[group],
+        layout_x=fmodel_candidates_all.layout_x[central_candidate] + candidate_layout[:, 0],
+        layout_y=fmodel_candidates_all.layout_y[central_candidate] + candidate_layout[:, 1],
         wind_data=fmodel_existing.wind_data
     )
 
