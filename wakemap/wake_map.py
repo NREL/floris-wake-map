@@ -186,22 +186,24 @@ class WakeMap():
 
             
         self.candidate_layout = candidate_layout - candidate_layout.mean(axis=0, keepdims=True)
-
-        # also compute the inverse. May not be necessary, but good for future-proofing
-        self.groups_inverse = []
-        for i in range(self.n_candidates):
-            self.groups_inverse.append(
-                np.array([j for j in range(self.n_candidates) if i in self.groups[j]])
-            )
-        # Inverses don't appear to be necessary, but help for clarity
-        match = np.array([(self.groups[i] == self.groups_inverse[i]).all()
-                          for i in range(self.n_candidates)]).all()
-        
         if self.verbose:
-            print("Candidate groups created. Largest contains {0} turbines; smallest contains {1} turbines.".format(
-                max([len(g) for g in self.groups]),
-                min([len(g) for g in self.groups])
-            ))
+            print("Candidate layout created with {0} turbines.".format(self.candidate_layout.shape[0]))
+
+        # # also compute the inverse. May not be necessary, but good for future-proofing
+        # self.groups_inverse = []
+        # for i in range(self.n_candidates):
+        #     self.groups_inverse.append(
+        #         np.array([j for j in range(self.n_candidates) if i in self.groups[j]])
+        #     )
+        # # Inverses don't appear to be necessary, but help for clarity
+        # match = np.array([(self.groups[i] == self.groups_inverse[i]).all()
+        #                   for i in range(self.n_candidates)]).all()
+        
+        # if self.verbose:
+        #     print("Candidate groups created. Largest contains {0} turbines; smallest contains {1} turbines.".format(
+        #         max([len(g) for g in self.groups]),
+        #         min([len(g) for g in self.groups])
+        #    ))
 
     def compute_raw_expected_powers_serial(self, save_in_parts=False, filename=None):
         """
@@ -328,8 +330,9 @@ class WakeMap():
 
         group_eps = np.mean(self.expected_powers_existing_raw, axis=1)
         candidate_eps = np.zeros_like(group_eps)
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_eps[i] = group_eps[grps_i].mean()
+        import ipdb; ipdb.set_trace()
+        # for i, grps_i in enumerate(self.groups_inverse):
+        #     candidate_eps[i] = group_eps[grps_i].mean()
 
         return candidate_eps
 

@@ -64,9 +64,9 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     if save_figs:
         fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wake_map.plot_candidate_groups(35, ax=ax)
-    if save_figs:
-        fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
+    #ax = wake_map.plot_candidate_groups(35, ax=ax)
+    #if save_figs:
+    #    fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
     #wake_map.compute_raw_expected_powers_serial()
     wake_map.compute_raw_expected_powers_parallel()
