@@ -376,13 +376,13 @@ class WakeMap():
         ) * 365 * 24 / 1e9 # Report value in GWh
         #import ipdb; ipdb.set_trace()
         group_losses = aep_losses_each.sum(axis=1)
-        candidate_losses = np.zeros_like(group_losses)
-        grp_size = np.array([len(grp) for grp in self.groups])
-        #print("Average group size: {0}. Max group size: {1}".format(grp_size.mean(), grp_size.max()))
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
+        # candidate_losses = np.zeros_like(group_losses)
+        # grp_size = np.array([len(grp) for grp in self.groups])
+        # #print("Average group size: {0}. Max group size: {1}".format(grp_size.mean(), grp_size.max()))
+        # for i, grps_i in enumerate(self.groups_inverse):
+        #     candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
 
-        return candidate_losses
+        return group_losses
 
     def process_candidate_aep_loss(self):
         """
@@ -413,12 +413,12 @@ class WakeMap():
         ) * 365 * 24 / 1e9
 
         group_losses = aep_losses_each.sum(axis=1)
-        candidate_losses = np.zeros_like(group_losses)
-        grp_size = np.array([len(grp) for grp in self.groups])
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
+        # candidate_losses = np.zeros_like(group_losses)
+        # grp_size = np.array([len(grp) for grp in self.groups])
+        # for i, grps_i in enumerate(self.groups_inverse):
+        #     candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
 
-        return candidate_losses
+        return group_losses
     
     def process_existing_expected_capacity_factors(self):
         """
