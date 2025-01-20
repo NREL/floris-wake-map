@@ -35,7 +35,7 @@ if __name__ == "__main__":
     if save_figs:
         fig.savefig("figs/example_wr.png", dpi=300, bbox_inches="tight", format="png")
 
-    fmodel = FlorisModel("inputs/gch.yaml")
+    fmodel = FlorisModel("inputs/emgauss_1.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)#, wind_shear=0.0)
     nm = 1852
     x_pos = np.linspace(0, 9*nm, 10)
