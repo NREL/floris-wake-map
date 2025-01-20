@@ -96,6 +96,7 @@ class WakeMap():
             _compute_expected_powers_existing_single_external_only if external_losses_only
             else _compute_expected_powers_existing_single
         )
+        self._external_losses_only = external_losses_only
 
         self._solved = False
 
@@ -356,15 +357,55 @@ class WakeMap():
         self.certify_solved()
 
         # Run a no wake calculation for the existing turbines
-        self.fmodel_existing.run_no_wake()
+        if self._external_losses_only:
+            self.fmodel_existing.run_no_wake()
+        else:
+            self.fmodel_existing.run()
         aep_losses_each = (
             self.fmodel_existing.get_expected_turbine_powers().reshape(1,-1)
             - np.array(self.expected_powers_existing_raw)
         ) * 365 * 24 / 1e9 # Report value in GWh
+        #import ipdb; ipdb.set_trace()
         group_losses = aep_losses_each.sum(axis=1)
         candidate_losses = np.zeros_like(group_losses)
         grp_size = np.array([len(grp) for grp in self.groups])
         #print("Average group size: {0}. Max group size: {1}".format(grp_size.mean(), grp_size.max()))
+        for i, grps_i in enumerate(self.groups_inverse):
+            candidate_losses[i] = group_losses[grps_i].mean()/grp_size.max()
+
+        return candidate_losses
+
+    def process_candidate_aep_loss(self):
+        """
+        Compute the AEP loss for each candidate. Reports in GWh.
+        """
+        self.certify_solved()
+
+        # Run a no wake calculation for the candidate
+        self.fmodel_all_candidates.run_no_wake()
+        aep_losses_candidates = (
+            self.fmodel_all_candidates.get_expected_turbine_powers()
+            - self.expected_powers_candidates_raw
+        ) * 365 * 24 / 1e9
+
+        return aep_losses_candidates
+
+    def process_existing_aep_loss_subset(self, subset: list):
+        """
+        Compute the AEP loss for each candidate. Reports in GWh.
+        """
+        self.certify_solved()
+
+        # Run a no wake calculation for the existing turbines
+        self.fmodel_existing.run_no_wake()
+        aep_losses_each = (
+            self.fmodel_existing.get_expected_turbine_powers()[subset].reshape(1,-1)
+            - np.array(self.expected_powers_existing_raw)[:, subset]
+        ) * 365 * 24 / 1e9
+
+        group_losses = aep_losses_each.sum(axis=1)
+        candidate_losses = np.zeros_like(group_losses)
+        grp_size = np.array([len(grp) for grp in self.groups])
         for i, grps_i in enumerate(self.groups_inverse):
             candidate_losses[i] = group_losses[grps_i].mean()/grp_size.max()
 
@@ -597,6 +638,7 @@ class WakeMap():
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         colorbar_label: str | None = None,
+        cmap: str = "Reds",
     ):
         """
         Plot the expected powers of the existing farm.
@@ -613,6 +655,10 @@ class WakeMap():
             plot_variable = self.process_existing_expected_normalized_powers()
             if colorbar_label is None:
                 colorbar_label = "Existing turbine normalized power [-]"
+        elif value == "aep_loss":
+            plot_variable = self.process_existing_aep_loss()
+            if colorbar_label is None:
+                colorbar_label = "Existing farm AEP loss [GWh]"
         else:
             raise ValueError(
                 "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
@@ -622,7 +668,7 @@ class WakeMap():
             plot_variable,
             ax=ax,
             normalizer=normalizer,
-            cmap="Blues",
+            cmap=cmap,
             colorbar_label=colorbar_label
         )
 
@@ -632,6 +678,7 @@ class WakeMap():
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         colorbar_label: str | None = None,
+        cmap: str = "Purples"
     ):
         """
         Plot the expected powers of the candidate farm.
@@ -648,6 +695,10 @@ class WakeMap():
             plot_variable = self.process_candidate_expected_normalized_powers()
             if colorbar_label is None:
                 colorbar_label = "Candidate turbine normalized power [-]"
+        elif value == "aep_loss":
+            plot_variable = self.process_candidate_aep_loss()
+            if colorbar_label is None:
+                colorbar_label = "Candidate turbine AEP loss [GWh]"
         else:
             raise ValueError(
                 "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
@@ -657,7 +708,7 @@ class WakeMap():
             plot_variable,
             ax=ax,
             normalizer=normalizer,
-            cmap="Purples",
+            cmap=cmap,
             colorbar_label=colorbar_label
         )
     

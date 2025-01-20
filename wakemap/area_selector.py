@@ -81,6 +81,10 @@ class AreaSelector():
                     v = self.wake_map.process_existing_expected_normalized_powers_subset(
                         subset=constraint_dict["subset"]
                     )
+                elif constraint_dict["value"] == "aep_loss":
+                    v = self.wake_map.process_existing_aep_loss_subset(
+                        subset=constraint_dict["subset"]
+                    )
                 else:
                     # Should already have checked, so this shouldn't happen.
                     raise ValueError("Invalid value for constraint_dict['value']")
@@ -91,6 +95,8 @@ class AreaSelector():
                     v = self.wake_map.process_existing_expected_capacity_factors()
                 elif constraint_dict["value"] == "normalized_power":
                     v = self.wake_map.process_existing_expected_normalized_powers()
+                elif constraint_dict["value"] == "aep_loss":
+                    v = self.wake_map.process_existing_aep_loss()
                 else:
                     # Should already have checked, so this shouldn't happen.
                     raise ValueError("Invalid value for constraint_dict['value']")
@@ -101,6 +107,8 @@ class AreaSelector():
                 v = self.wake_map.process_candidate_expected_capacity_factors()
             elif constraint_dict["value"] == "normalized_power":
                 v = self.wake_map.process_candidate_expected_normalized_powers()
+            elif constraint_dict["value"] == "aep_loss":
+                v = self.wake_map.process_candidate_aep_loss()
             else:
                 # Should already have checked, so this shouldn't happen.
                 raise ValueError("Invalid value for constraint_dict['value']")
@@ -108,7 +116,10 @@ class AreaSelector():
             # Should already have checked, so this shouldn't happen.
             raise ValueError("Invalid value for constraint_dict['turbines']")
 
-        self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
+        if constraint_dict["value"] == "aep_loss":
+            self._constraint_masks_dict[constraint_dict["name"]] = v <= constraint_dict["threshold"]
+        else:
+            self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
 
         self._state = 1 # Constraints added, selection can proceed
 
@@ -190,7 +201,10 @@ class AreaSelector():
             elif self._objective_dict["value"] == "normalized_power":
                 v_c = self.wake_map.process_candidate_expected_normalized_powers()
                 v_e = self.wake_map.process_existing_expected_normalized_powers()
-            
+            elif self._objective_dict["value"] == "aep_loss":
+                v_c = -self.wake_map.process_candidate_aep_loss()
+                v_e = -self.wake_map.process_existing_aep_loss()
+
             v_both = (
                 self._objective_dict["candidates_weight"]*v_c
                 + self._objective_dict["existing_weight"]*v_e
@@ -233,3 +247,31 @@ class AreaSelector():
         layout_viz.plot_turbine_points(fmodel_plot, ax=ax, plotting_dict=plotting_dict)
 
         return ax
+    
+    def plot_constraints(
+        self,
+        ax: plt.Axes | None = None,
+        plotting_dict: Dict[str, Any] = {}
+    ):
+        if self._state < 1:
+            raise RuntimeError("Cannot plot constraints until constraints have been added.")
+
+        if ax is None:
+            _, ax = plt.subplots()
+
+        #TODO more work here.
+        import ipdb; ipdb.set_trace()
+        if constraint_dict["value"] == "aep_loss":
+            self._constraint_masks_dict[constraint_dict["name"]] = v <= constraint_dict["threshold"]
+        else:
+            self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
+
+        
+        
+        ctrf = ax.tricontourf(
+            self.all_candidates_x,
+            self.all_candidates_y,
+            values/normalizer,
+            cmap=cmap
+        )
+

@@ -26,10 +26,14 @@ if __name__ == "__main__":
         heterogeneous_map=heterogeneous_map,
     )
     wind_rose_test.plot()
+    fig = plt.gcf()
 
     save_figs = False
 
-    value = "capacity_factor"
+    value = "aep_loss"
+
+    if save_figs:
+        fig.savefig("figs/example_wr.png", dpi=300, bbox_inches="tight", format="png")
 
     fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)#, wind_shear=0.0)
@@ -47,7 +51,7 @@ if __name__ == "__main__":
         fmodel,
         wind_rose_test,
         min_dist=nm,
-        group_diameter=8000,
+        group_diameter=1000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
         external_losses_only=True,
         verbose=True
