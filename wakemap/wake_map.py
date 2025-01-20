@@ -371,7 +371,7 @@ class WakeMap():
         grp_size = np.array([len(grp) for grp in self.groups])
         #print("Average group size: {0}. Max group size: {1}".format(grp_size.mean(), grp_size.max()))
         for i, grps_i in enumerate(self.groups_inverse):
-            candidate_losses[i] = group_losses[grps_i].mean()/grp_size.max()
+            candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
 
         return candidate_losses
 
@@ -407,7 +407,7 @@ class WakeMap():
         candidate_losses = np.zeros_like(group_losses)
         grp_size = np.array([len(grp) for grp in self.groups])
         for i, grps_i in enumerate(self.groups_inverse):
-            candidate_losses[i] = group_losses[grps_i].mean()/grp_size.max()
+            candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
 
         return candidate_losses
     
