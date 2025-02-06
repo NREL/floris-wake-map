@@ -121,10 +121,13 @@ class AreaSelector():
         else:
             self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
 
+        self._constraints_list.append(constraint_dict)
+
         self._state = 1 # Constraints added, selection can proceed
 
     def reset_constraints(self):
         self._constraint_masks_dict = {}
+        self._constraints_list = []
 
     def report_constraints(self):
 
@@ -210,6 +213,7 @@ class AreaSelector():
                 + self._objective_dict["existing_weight"]*v_e
             )
 
+            self.objective_value = v_both.copy()
             v_both = v_both[mask_all]
 
             best_indices = np.argsort(v_both)[::-1][:self._objective_dict["n_target"]]
@@ -251,6 +255,7 @@ class AreaSelector():
     def plot_constraints(
         self,
         ax: plt.Axes | None = None,
+        to_plot: list | None = None,
         plotting_dict: Dict[str, Any] = {}
     ):
         if self._state < 1:
@@ -260,18 +265,51 @@ class AreaSelector():
             _, ax = plt.subplots()
 
         #TODO more work here.
-        import ipdb; ipdb.set_trace()
-        if constraint_dict["value"] == "aep_loss":
-            self._constraint_masks_dict[constraint_dict["name"]] = v <= constraint_dict["threshold"]
-        else:
-            self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
+        # import ipdb; ipdb.set_trace()
+        # if constraint_dict["value"] == "aep_loss":
+        #     self._constraint_masks_dict[constraint_dict["name"]] = v <= constraint_dict["threshold"]
+        # else:
+        #     self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
+        if to_plot is None:
+            to_plot = list(self._constraint_masks_dict.keys())
 
+        mask_all = np.ones_like(self._allowable_candidates_x, dtype=bool)
+        for k in to_plot:
+            mask_all = mask_all & self._constraint_masks_dict[k]
         
         
         ctrf = ax.tricontourf(
-            self.all_candidates_x,
-            self.all_candidates_y,
-            values/normalizer,
+            self.wake_map.all_candidates_x,
+            self.wake_map.all_candidates_y,
+            mask_all,
+            vmin=0.5,
+            vmax=1.5,
+            colors="white",
+            hatches=["/"]
+        )
+
+        return ax
+    
+    def plot_objective(
+        self,
+        ax: plt.Axes | None = None,
+        cmap: str="viridis",
+        plotting_dict: Dict[str, Any] = {}
+    ):
+        if self._state < 2:
+            raise RuntimeError("Cannot plot objective until objective has been added.")
+        
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.get_figure()
+        
+        ctrf = ax.tricontourf(
+            self.wake_map.all_candidates_x,
+            self.wake_map.all_candidates_y,
+            -self.objective_value,
             cmap=cmap
         )
 
+        cbar = fig.colorbar(ctrf, ax=ax)
+        cbar.set_label("Objective value")
