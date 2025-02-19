@@ -30,7 +30,10 @@ if __name__ == "__main__":
         layout_y=y_pos.flatten(),
     )
 
-    exclusion_zone = [(15000, -5000), (20000, -2000), (15000, -2000)]
+    exclusion_zones = [
+        [(15000, -7000), (20000, -2000), (15000, -2000)], # First zone
+        [(-7000, 15000), (-4000, 15000), (-4000, 20000), (-7000, 20000)] # Second zone
+    ]
 
     wake_map = WakeMap(
         fmodel,
@@ -38,7 +41,7 @@ if __name__ == "__main__":
         min_dist=nm,
         group_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
-        exclusion_zones=[exclusion_zone],
+        exclusion_zones=exclusion_zones,
         external_losses_only=True,
         verbose=True
     )
