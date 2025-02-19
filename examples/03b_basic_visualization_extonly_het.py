@@ -3,7 +3,7 @@ import numpy as np
 
 from floris import FlorisModel, WindRose, HeterogeneousMap
 
-from wakemap import WakeMap
+from floriswakemap import WakeMap
 
 if __name__ == "__main__":
     wind_speeds = np.array([8.0, 10.0])

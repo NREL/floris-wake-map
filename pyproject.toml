@@ -3,7 +3,7 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "wakemap"
+name = "floriswakemap"
 version = "0.1"
 description = "Map of cluster wake impacts on existing farms for planning new wind farm locations."
 readme = "README.md"
@@ -45,10 +45,10 @@ develop = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["wakemap*"]
+include = ["floriswakemap*"]
 
 [project.urls]
-# Homepage = "https://github.com/NREL/flasc"
+# Homepage = "https://github.com/NREL/floris-wake-map"
 # Documentation = "https://readthedocs.org"
 
 
@@ -94,7 +94,7 @@ exclude = [
     "venv",
 ]
 
-src = ["wakemap", "tests"]
+src = ["floriswakemap", "tests"]
 line-length = 100
 target-version = "py310"
 extend-include = ["*.ipynb"]
@@ -119,7 +119,7 @@ unfixable = []
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
-known-first-party = ["wakemap"]
+known-first-party = ["floriswakemap"]
 order-by-type = false
 
 # [tool.ruff.format]
@@ -128,11 +128,11 @@ order-by-type = false
 # Ignore `F401` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
 "__init__.py" = ["F401"]
 
-# Ignore pydocstyle in directories besides wakemap
-"wakemap/timing_tests/*" = ["D"]
-"wakemap/version.py" = ["D"]
-"tests/*" = ["D"]
-"examples_*/*" = ["D"]
+# Ignore pydocstyle in directories besides floriswakemap
+#"floriswakemap/timing_tests/*" = ["D"]
+#"floriswakemap/version.py" = ["D"]
+#"tests/*" = ["D"]
+"examples/*" = ["D"]
 "docs/*" = ["D"]
 
 [tool.ruff.lint.pydocstyle]

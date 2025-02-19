@@ -7,7 +7,7 @@ import pickle
 
 from floris import FlorisModel
 
-from wakemap import WakeMap
+from floriswakemap import WakeMap
 
 if __name__ == "__main__":
     with open("../../cw_jip/analysis/wind_rose_vineyard.pkl", "rb") as f:
