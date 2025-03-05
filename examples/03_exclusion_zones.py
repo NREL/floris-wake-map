@@ -54,7 +54,7 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     if save_figs:
         fig.savefig("figs/layouts_can_excl.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wake_map.plot_candidate_groups(35, ax=ax)
+    ax = wake_map.plot_candidate_layout(35, ax=ax)
     if save_figs:
         fig.savefig("figs/layouts_groups_excl.png", dpi=300, bbox_inches="tight", format="png")
 

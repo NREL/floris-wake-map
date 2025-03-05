@@ -189,22 +189,6 @@ class WakeMap():
         if self.verbose:
             print("Candidate layout created with {0} turbines.".format(self.candidate_layout.shape[0]))
 
-        # # also compute the inverse. May not be necessary, but good for future-proofing
-        # self.groups_inverse = []
-        # for i in range(self.n_candidates):
-        #     self.groups_inverse.append(
-        #         np.array([j for j in range(self.n_candidates) if i in self.groups[j]])
-        #     )
-        # # Inverses don't appear to be necessary, but help for clarity
-        # match = np.array([(self.groups[i] == self.groups_inverse[i]).all()
-        #                   for i in range(self.n_candidates)]).all()
-        
-        # if self.verbose:
-        #     print("Candidate groups created. Largest contains {0} turbines; smallest contains {1} turbines.".format(
-        #         max([len(g) for g in self.groups]),
-        #         min([len(g) for g in self.groups])
-        #    ))
-
     def compute_raw_expected_powers_serial(self, save_in_parts=False, filename=None):
         """
         Compute the turbine expected power for each candidate group; as well as for the existing
@@ -329,12 +313,8 @@ class WakeMap():
         self.certify_solved()
 
         group_eps = np.mean(self.expected_powers_existing_raw, axis=1)
-        candidate_eps = np.zeros_like(group_eps)
-        import ipdb; ipdb.set_trace()
-        # for i, grps_i in enumerate(self.groups_inverse):
-        #     candidate_eps[i] = group_eps[grps_i].mean()
 
-        return candidate_eps
+        return group_eps
 
 
     def process_candidate_expected_powers(self):
@@ -353,11 +333,8 @@ class WakeMap():
         self.certify_solved()
 
         group_eps = np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
-        candidate_eps = np.zeros_like(group_eps)
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_eps[i] = group_eps[grps_i].mean()
 
-        return candidate_eps
+        return group_eps
     
     def process_existing_aep_loss(self):
         """
@@ -374,13 +351,8 @@ class WakeMap():
             self.fmodel_existing.get_expected_turbine_powers().reshape(1,-1)
             - np.array(self.expected_powers_existing_raw)
         ) * 365 * 24 / 1e9 # Report value in GWh
-        #import ipdb; ipdb.set_trace()
+
         group_losses = aep_losses_each.sum(axis=1)
-        # candidate_losses = np.zeros_like(group_losses)
-        # grp_size = np.array([len(grp) for grp in self.groups])
-        # #print("Average group size: {0}. Max group size: {1}".format(grp_size.mean(), grp_size.max()))
-        # for i, grps_i in enumerate(self.groups_inverse):
-        #     candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
 
         return group_losses
 
@@ -413,10 +385,6 @@ class WakeMap():
         ) * 365 * 24 / 1e9
 
         group_losses = aep_losses_each.sum(axis=1)
-        # candidate_losses = np.zeros_like(group_losses)
-        # grp_size = np.array([len(grp) for grp in self.groups])
-        # for i, grps_i in enumerate(self.groups_inverse):
-        #     candidate_losses[i] = group_losses[grps_i].mean()#/grp_size.max()
 
         return group_losses
     
@@ -432,11 +400,8 @@ class WakeMap():
         ).reshape(1, -1)*1e3
 
         group_cfs = np.mean(np.array(self.expected_powers_existing_raw)/rated_powers, axis=1)
-        candidate_cfs = np.zeros_like(group_cfs)
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_cfs[i] = group_cfs[grps_i].mean()
 
-        return candidate_cfs
+        return group_cfs
     
     def process_candidate_expected_capacity_factors(self):
         """
@@ -461,11 +426,8 @@ class WakeMap():
         ).reshape(1, -1)*1e3
 
         group_cfs = np.mean(np.array(self.expected_powers_existing_raw)[:, subset]/rated_powers, axis=1)
-        candidate_cfs = np.zeros_like(group_cfs)
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_cfs[i] = group_cfs[grps_i].mean()
 
-        return candidate_cfs
+        return group_cfs
 
     def process_existing_expected_normalized_powers(self):
         """
@@ -482,11 +444,8 @@ class WakeMap():
         )
 
         group_neps = np.mean(normalized_expected_powers, axis=1)
-        candidate_neps = np.zeros_like(group_neps)
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_neps[i] = group_neps[grps_i].mean()
 
-        return candidate_neps
+        return group_neps
     
     def process_candidate_expected_normalized_powers(self):
         """
@@ -519,11 +478,8 @@ class WakeMap():
         )
 
         group_neps = np.mean(normalized_expected_powers, axis=1)
-        candidate_neps = np.zeros_like(group_neps)
-        for i, grps_i in enumerate(self.groups_inverse):
-            candidate_neps[i] = group_neps[grps_i].mean()
 
-        return candidate_neps
+        return group_neps
 
     def save_raw_expected_powers(self, filename: str):
         """
@@ -650,7 +606,7 @@ class WakeMap():
         if value == "power":
             plot_variable = self.process_existing_expected_powers()
             if colorbar_label is None:
-                colorbar_label = "Existing turbine power [MW]"
+                colorbar_label = "Existing turbine expected power [MW]"
         elif value == "capacity_factor":
             plot_variable = self.process_existing_expected_capacity_factors()
             if colorbar_label is None:
