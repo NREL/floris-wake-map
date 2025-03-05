@@ -1,25 +1,22 @@
-"""
-This example takes about 10 minutes to run locally.
-"""
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
 
-from floris import FlorisModel
+from floris import FlorisModel, WindRose
 
-from wakemap import WakeMap
+from floriswakemap import WakeMap
 
 if __name__ == "__main__":
-    with open("../../cw_jip/analysis/wind_rose_vineyard.pkl", "rb") as f:
-        wind_rose_vyw = pickle.load(f)
-        wind_rose_vyw.heterogeneous_map = None
-    wind_rose_vyw.plot()
+    wind_rose_test = WindRose(
+        wind_speeds=np.array([8.0, 10.0]),
+        wind_directions=np.array([45.0, 90.0, 135.0, 180.0, 225.0, 270.0]),
+        freq_table=np.array([[0.2, 0.05], [0.2, 0.05], [0.0, 0.0], [0.0, 0.0], [0.37, 0.38], [0.5, 0.25]]),
+        ti_table=0.06
+    )
+    wind_rose_test.plot()
 
-    #wind_rose_vyw.downsample(wd_step=5.0, ws_step=2.0, inplace=True)
-    #wind_rose_vyw.plot()
-    fig = plt.gcf()
-    fig.savefig("figs/vyw_windrose_full.png", dpi=300, bbox_inches="tight", format="png")
+    save_figs = True
 
+    value = "capacity_factor"
 
     fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
@@ -32,50 +29,61 @@ if __name__ == "__main__":
         layout_x=x_pos.flatten(),
         layout_y=y_pos.flatten(),
     )
-    print("Conditions in wind rose:", wind_rose_vyw.n_findex)
-    print("Turbines in domain:", len(fmodel.layout_x))
+
+    exclusion_zones = [
+        [(15000, -7000), (20000, -2000), (15000, -2000)], # First zone
+        [(-7000, 15000), (-4000, 15000), (-4000, 20000), (-7000, 20000)] # Second zone
+    ]
 
     wake_map = WakeMap(
         fmodel,
-        wind_rose_vyw,
+        wind_rose_test,
         min_dist=nm,
         group_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
+        exclusion_zones=exclusion_zones,
         external_losses_only=True,
         verbose=True
     )
 
     ax = wake_map.plot_existing_farm()
+    ax = wake_map.plot_exclusion_zones(ax=ax)
     fig = ax.get_figure()
-    fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig.savefig("figs/layouts_ex_excl.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_locations(ax=ax)
-    fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig.savefig("figs/layouts_can_excl.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_groups(35, ax=ax)
-    fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig.savefig("figs/layouts_groups_excl.png", dpi=300, bbox_inches="tight", format="png")
 
-    wake_map.compute_raw_expected_powers_serial()
+    wake_map.compute_raw_expected_powers_parallel()
 
     ee = wake_map.process_existing_expected_powers()
     ce = wake_map.process_candidate_expected_powers()
 
     # Candidate map (identical, as expected)
-    ax = wake_map.plot_candidate_value(value="capacity_factor")
+    ax = wake_map.plot_candidate_value(value=value)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_exclusion_zones(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/candidate_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig.savefig("figs/candidate_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
-    ax = wake_map.plot_existing_value(value="capacity_factor")
+    ax = wake_map.plot_existing_value(value=value)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_exclusion_zones(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/existing_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig.savefig("figs/existing_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map, subset (as for full map).
-    # Make a couple of different options here.
     subset=range(10)
     es = wake_map.process_existing_expected_capacity_factors_subset(subset=subset)
     ax = wake_map.plot_contour(
@@ -84,10 +92,10 @@ if __name__ == "__main__":
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
     ax = wake_map.plot_candidate_locations(ax=ax)
+    ax = wake_map.plot_exclusion_zones(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/subset_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
-
-    wake_map.save_raw_expected_powers("raw_expected_powers_vywr_full.npz")
+    if save_figs:
+        fig.savefig("figs/subset_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png")
 
     plt.show()

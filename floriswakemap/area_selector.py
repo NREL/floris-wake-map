@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from floris import layout_visualization as layout_viz
 
-from wakemap import WakeMap
+from floriswakemap import WakeMap
 
 class AreaSelector():
     """

@@ -3,7 +3,7 @@ import numpy as np
 
 from floris import FlorisModel, WindRose
 
-from wakemap import WakeMap, AreaSelector
+from floriswakemap import WakeMap, AreaSelector
 
 if __name__ == "__main__":
     wind_rose_test = WindRose(

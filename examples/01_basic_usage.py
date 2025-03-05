@@ -3,7 +3,7 @@ import numpy as np
 
 from floris import FlorisModel, WindRose
 
-from wakemap import WakeMap
+from floriswakemap import WakeMap
 
 if __name__ == "__main__":
     wind_rose_test = WindRose(
@@ -13,10 +13,6 @@ if __name__ == "__main__":
         ti_table=0.06
     )
     wind_rose_test.plot()
-
-    save_figs = False
-
-    value = "capacity_factor"
 
     fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
@@ -36,58 +32,49 @@ if __name__ == "__main__":
         min_dist=nm,
         group_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
-        external_losses_only=True,
         verbose=True
     )
 
     ax = wake_map.plot_existing_farm()
     fig = ax.get_figure()
-    if save_figs:
-        fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_locations(ax=ax)
-    if save_figs:
-        fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wake_map.plot_candidate_layout(35, ax=ax)
-    if save_figs:
-        fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
+    ax = wake_map.plot_candidate_groups(35, ax=ax)
+    fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
-    wake_map.compute_raw_expected_powers_parallel()
+    wake_map.compute_raw_expected_powers_serial()
 
     ee = wake_map.process_existing_expected_powers()
     ce = wake_map.process_candidate_expected_powers()
 
-    # Candidate map (identical, as expected)
-    ax = wake_map.plot_candidate_value(value=value)
+    # Candidate map
+    ax = wake_map.plot_candidate_value(value="power", normalizer=1e6)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    if save_figs:
-        fig.savefig("figs/candidate_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
-    # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
-    ax = wake_map.plot_existing_value(value=value)
+    # Existing map
+    ax = wake_map.plot_existing_value(value="power", normalizer=1e6)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    if save_figs:
-        fig.savefig("figs/existing_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/existing_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
-    # Existing map, subset (as for full map).
+    # Existing map, subset
     subset=range(10)
-    es = wake_map.process_existing_expected_normalized_powers()
-    cs = wake_map.process_candidate_expected_normalized_powers()
-    es = wake_map.process_existing_expected_capacity_factors_subset(subset=subset)
+    es = wake_map.process_existing_expected_powers_subset(subset=subset)
     ax = wake_map.plot_contour(
-        es, cmap="Blues", colorbar_label="Subset turbine capacity factor [-]"
+        es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine power [MW]"
     )
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    if save_figs:
-        fig.savefig("figs/subset_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig("figs/subset_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
     plt.show()
