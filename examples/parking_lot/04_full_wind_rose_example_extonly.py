@@ -1,10 +1,10 @@
 """
 This example takes about 10 minutes to run locally.
 """
-import matplotlib.pyplot as plt
-import numpy as np
 import pickle
 
+import matplotlib.pyplot as plt
+import numpy as np
 from floris import FlorisModel
 
 from floriswakemap import WakeMap

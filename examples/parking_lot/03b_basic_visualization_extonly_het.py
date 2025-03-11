@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
-from floris import FlorisModel, WindRose, HeterogeneousMap
+from floris import FlorisModel, HeterogeneousMap, WindRose
 
 from floriswakemap import WakeMap
 

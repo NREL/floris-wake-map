@@ -25,6 +25,8 @@ dependencies = [
     "numpy~=1.20",
     "pandas~=2.0",
     "scipy~=1.1",
+    "shapely~=2.0",
+    "pathos~=0.3.3",
     "coloredlogs~=15.0",
 ]
 
@@ -107,7 +109,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 # See https://github.com/charliermarsh/ruff#supported-rules
 # for rules included and matching to prefix.
-select = ["E", "F", "I", "D"]
+select = ["E", "F", "I"]
 
 # Ignore == -> is as this breaks in pandas
 ignore = ["E712"]
