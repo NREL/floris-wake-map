@@ -33,7 +33,10 @@ wake_map = WakeMap(
 )
 
 wake_map.compute_raw_expected_powers_parallel()
-print(wake_map.expected_powers_candidates_raw.shape)
+print(
+    "Shape of computed expected_powers_candidates:",
+    wake_map.expected_powers_candidates_raw.shape
+)
 filename = "test_raw_expected_powers.npz"
 wake_map.save_raw_expected_powers(filename)
 
@@ -41,5 +44,7 @@ wake_map.expected_powers_candidates_raw = None
 wake_map.expected_powers_existing_raw = None
 
 wake_map.load_raw_expected_powers(filename)
-
-print(wake_map.expected_powers_candidates_raw.shape)
+print(
+    "Shape of loaded expected_powers_candidates:",
+    wake_map.expected_powers_candidates_raw.shape
+)
