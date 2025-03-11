@@ -1,7 +1,4 @@
-from typing import (
-    Any,
-    Dict,
-)
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,7 +15,7 @@ class AreaSelector():
         """
         Constructor for the AreaSelector class.
 
-        Receives instantiated WakeMap object and checks that the main maps have been 
+        Receives instantiated WakeMap object and checks that the main maps have been
         computed.
         """
 
@@ -44,12 +41,12 @@ class AreaSelector():
         # Check that all inputs are valid
         if not all([key in constraint_dict for key in required_keys]):
             raise ValueError("Constraint dictionary must contain keys: {0}".format(required_keys))
-        
+
         if constraint_dict["turbines"] not in ["existing", "candidates"]:
             raise ValueError(
                 "Constraint dictionary key 'turbines' must be either 'existing' or 'candidate'."
             )
-        
+
         #if constraint_dict["value"] not in ["power", "AEP"]:
         #    raise ValueError("Constraint dictionary key 'value' must be either 'power' or 'AEP'.")
 
@@ -66,7 +63,7 @@ class AreaSelector():
             raise ValueError("Constraint name already in use.")
 
         # See about better handling here, if possible.
-        
+
         if constraint_dict["turbines"] == "existing":
             if "subset" in constraint_dict.keys():
                 if constraint_dict["value"] == "power":
@@ -140,7 +137,7 @@ class AreaSelector():
             print("Turbine candidates meeting constraint: {0:.2f}%\n".format(sum(m)/len(m)*100))
 
         return
-    
+
     def add_objective(self, objective_dict):
         # TODO: add this in
         self._state = 1 # Objective added, selection can proceed
@@ -150,11 +147,11 @@ class AreaSelector():
         # Check that all inputs are valid
         if not all([key in objective_dict for key in required_keys]):
             raise ValueError("Objective dictionary must contain keys: {0}".format(required_keys))
-        
+
         for key in ["candidates_weight", "existing_weight"]:
             if not isinstance(objective_dict[key], (int, float)):
                 raise ValueError("Objective dictionary key '{0}' must be a number.".format(key))
-            
+
         # TODO: handle subsets
         self._objective_dict = objective_dict
 
@@ -231,10 +228,10 @@ class AreaSelector():
 
         if self._state != 2:
             raise RuntimeError("Cannot plot selection until candidates have been selected.")
-        
+
         if ax is None:
             _, ax = plt.subplots()
-    
+
         # ax = self.wake_map.plot_existing_farm(ax=ax)
         # ax = self.wake_map.plot_candidate_locations(ax=ax)
         # ax = self.wake_map.plot_exclusion_zones(ax=ax)
@@ -251,7 +248,7 @@ class AreaSelector():
         layout_viz.plot_turbine_points(fmodel_plot, ax=ax, plotting_dict=plotting_dict)
 
         return ax
-    
+
     def plot_constraints(
         self,
         ax: plt.Axes | None = None,
@@ -276,8 +273,8 @@ class AreaSelector():
         mask_all = np.ones_like(self._allowable_candidates_x, dtype=bool)
         for k in to_plot:
             mask_all = mask_all & self._constraint_masks_dict[k]
-        
-        
+
+
         ctrf = ax.tricontourf(
             self.wake_map.all_candidates_x,
             self.wake_map.all_candidates_y,
@@ -289,7 +286,7 @@ class AreaSelector():
         )
 
         return ax
-    
+
     def plot_objective(
         self,
         ax: plt.Axes | None = None,
@@ -298,12 +295,12 @@ class AreaSelector():
     ):
         if self._state < 2:
             raise RuntimeError("Cannot plot objective until objective has been added.")
-        
+
         if ax is None:
             fig, ax = plt.subplots()
         else:
             fig = ax.get_figure()
-        
+
         ctrf = ax.tricontourf(
             self.wake_map.all_candidates_x,
             self.wake_map.all_candidates_y,

@@ -1,6 +1,7 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 from floris import FlorisModel, WindRose
 
 from floriswakemap import WakeMap

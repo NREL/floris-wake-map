@@ -75,7 +75,7 @@ if __name__ == "__main__":
     ax_c = wake_map.plot_candidate_locations(ax=ax_c)
     ax_c = wake_map.plot_exclusion_zones(ax=ax_c)
     ax_c = area_selector.plot_selection(ax=ax_c)
-    
+
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
     ax_e = wake_map.plot_existing_value(value=value)
     ax_e.set_aspect("equal")
