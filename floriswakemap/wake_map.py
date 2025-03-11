@@ -284,11 +284,17 @@ class WakeMap():
         """
         Compute expected power for candidates, based on FlorisModel.sample_flow_at_points().
         """
+        # Expand to all possible candidate locations. TODO: Consider using ParFlorisModel (Floris v4.3)
+        all_candidates_x2 = np.repeat(self.all_candidates_x, self.candidate_layout.shape[0])
+        all_candidates_x2 += np.tile(self.candidate_layout[:, 0], self.all_candidates_x.shape[0])
+        all_candidates_y2 = np.repeat(self.all_candidates_y, self.candidate_layout.shape[0])
+        all_candidates_y2 += np.tile(self.candidate_layout[:, 1], self.all_candidates_y.shape[0])
+
         # Start with just a hub height wind speed (simpler than rotor averaging)
         wind_speeds = self.fmodel_existing.sample_flow_at_points(
-            x=self.all_candidates_x,
-            y=self.all_candidates_y,
-            z=self.fmodel_all_candidates.reference_wind_height * np.ones_like(self.all_candidates_x)
+            x=all_candidates_x2,
+            y=all_candidates_y2,
+            z=self.fmodel_all_candidates.reference_wind_height * np.ones_like(all_candidates_x2)
         )
         # Get power() values for those speeds
         candidate_powers = self.fmodel_all_candidates.core.farm.turbine_map[0].power_function(
@@ -296,13 +302,17 @@ class WakeMap():
             velocities=wind_speeds,
             air_density=self.fmodel_all_candidates.core.flow_field.air_density,
             yaw_angles=np.zeros_like(wind_speeds),
-            tilt_angles=self.fmodel_all_candidates.core.farm.tilt_angles, # MAYBE NOT?
+            tilt_angles=self.fmodel_all_candidates.core.farm.tilt_angles[0,0], # MAYBE NOT?
             tilt_interp=self.fmodel_all_candidates.core.farm.turbine_map[0].tilt_interp,
         )
-        # Apply frequency to compute expected powers
+        # Reshape to be size (n_findex x n_candidates x layout_size)
+        candidate_powers = candidate_powers.reshape(
+            self.fmodel_existing.n_findex, self.n_candidates, self.candidate_layout.shape[0]
+        )
+        # Apply frequencies to compute individual expected powers
         frequencies = self.fmodel_existing.wind_data.unpack_freq()
         self.expected_powers_candidates_raw = np.nansum(
-            np.multiply(frequencies.reshape(-1, 1), candidate_powers),
+            np.multiply(frequencies.reshape(-1, 1, 1), candidate_powers),
             axis=0
         )
 
@@ -312,9 +322,7 @@ class WakeMap():
         """
         self.certify_solved()
 
-        group_eps = np.mean(self.expected_powers_existing_raw, axis=1)
-
-        return group_eps
+        return np.mean(self.expected_powers_existing_raw, axis=1)
 
 
     def process_candidate_expected_powers(self):
@@ -324,7 +332,7 @@ class WakeMap():
         """
         self.certify_solved()
 
-        return self.expected_powers_candidates_raw
+        return np.mean(self.expected_powers_candidates_raw, axis=1)
 
     def process_existing_expected_powers_subset(self, subset: list):
         """
@@ -332,9 +340,7 @@ class WakeMap():
         """
         self.certify_solved()
 
-        group_eps = np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
-
-        return group_eps
+        return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
     
     def process_existing_aep_loss(self):
         """
@@ -352,9 +358,9 @@ class WakeMap():
             - np.array(self.expected_powers_existing_raw)
         ) * 365 * 24 / 1e9 # Report value in GWh
 
-        group_losses = aep_losses_each.sum(axis=1)
+        existing_losses = aep_losses_each.sum(axis=1)
 
-        return group_losses
+        return existing_losses
 
     def process_candidate_aep_loss(self):
         """
@@ -363,13 +369,36 @@ class WakeMap():
         self.certify_solved()
 
         # Run a no wake calculation for the candidate
-        self.fmodel_all_candidates.run_no_wake()
-        aep_losses_candidates = (
-            self.fmodel_all_candidates.get_expected_turbine_powers()
-            - self.expected_powers_candidates_raw
-        ) * 365 * 24 / 1e9
+        all_candidates_x2 = np.repeat(self.all_candidates_x, self.candidate_layout.shape[0])
+        all_candidates_x2 += np.tile(self.candidate_layout[:, 0], self.all_candidates_x.shape[0])
+        all_candidates_y2 = np.repeat(self.all_candidates_y, self.candidate_layout.shape[0])
+        all_candidates_y2 += np.tile(self.candidate_layout[:, 1], self.all_candidates_y.shape[0])
 
-        return aep_losses_candidates
+        self.fmodel_all_candidates.set(
+            layout_x=all_candidates_x2,
+            layout_y=all_candidates_y2,
+            turbine_type=[self.candidate_turbine]
+        )
+        
+        self.fmodel_all_candidates.run_no_wake()
+        no_wake_expected_powers = self.fmodel_all_candidates.get_expected_turbine_powers()
+        no_wake_expected_powers = no_wake_expected_powers.reshape(
+            self.n_candidates, self.candidate_layout.shape[0]
+        )
+        aep_losses_candidates = (
+            no_wake_expected_powers
+            - self.expected_powers_candidates_raw
+        ) * 365 * 24 / 1e9 # Report value in GWh
+
+        # Revert layout
+        self.fmodel_all_candidates.set(
+            layout_x=self.all_candidates_x,
+            layout_y=self.all_candidates_y,
+        )
+
+        candidate_group_losses = aep_losses_candidates.sum(axis=1)
+
+        return candidate_group_losses
 
     def process_existing_aep_loss_subset(self, subset: list):
         """
@@ -621,7 +650,7 @@ class WakeMap():
                 colorbar_label = "Existing farm AEP loss [GWh]"
         else:
             raise ValueError(
-                "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
+                "Invalid type. Must be 'power', 'normalized_power', 'aep_loss', or 'capacity_factor'."
             )
         
         return self.plot_contour(
@@ -658,7 +687,7 @@ class WakeMap():
         elif value == "aep_loss":
             plot_variable = self.process_candidate_aep_loss()
             if colorbar_label is None:
-                colorbar_label = "Candidate turbine AEP loss [GWh]"
+                colorbar_label = "Candidate group AEP loss [GWh]"
         else:
             raise ValueError(
                 "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
