@@ -101,8 +101,6 @@ target-version = "py310"
 #extend-include = ["*.ipynb"]
 
 
-[tool.ruff.lint]
-
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
