@@ -648,7 +648,7 @@ class WakeMap():
         """
         Plot the expected powers of the existing farm.
         """
-        match value:
+        match value: # noqa: E999
             case "power":
                 plot_variable = self.process_existing_expected_powers()
                 colorbar_label_default = "Existing turbine expected power [MW]"
