@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from floris import FlorisModel, WindRose
 
 from floriswakemap import WakeMap
@@ -14,6 +15,8 @@ if __name__ == "__main__":
     wind_rose_test.plot()
 
     save_figs = True
+    if save_figs and not os.path.exists("figs"):
+        os.makedirs("figs")
 
     value = "capacity_factor"
 

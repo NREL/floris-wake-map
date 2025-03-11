@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from floris import FlorisModel, WindRose
 
 from floriswakemap import WakeMap
@@ -12,6 +13,10 @@ if __name__ == "__main__":
         ti_table=0.06
     )
     wind_rose_test.plot()
+
+    save_figs = False
+    if save_figs and not os.path.exists("figs"):
+        os.makedirs("figs")
 
     fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
@@ -35,12 +40,15 @@ if __name__ == "__main__":
     )
 
     ax = wake_map.plot_existing_farm()
-    fig = ax.get_figure()
-    fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig = ax.get_figure()
+        fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_locations(ax=ax)
-    fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_layout(35, ax=ax)
-    fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
     wake_map.compute_raw_expected_powers_serial()
 
@@ -52,16 +60,18 @@ if __name__ == "__main__":
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
-    fig = ax.get_figure()
-    fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig = ax.get_figure()
+        fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map
     ax = wake_map.plot_existing_value(value="power", normalizer=1e6)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
-    fig = ax.get_figure()
-    fig.savefig("figs/existing_power_map.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig = ax.get_figure()
+        fig.savefig("figs/existing_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map, subset
     subset=range(10)
@@ -73,7 +83,8 @@ if __name__ == "__main__":
     ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
-    fig = ax.get_figure()
-    fig.savefig("figs/subset_power_map.png", dpi=300, bbox_inches="tight", format="png")
+    if save_figs:
+        fig = ax.get_figure()
+        fig.savefig("figs/subset_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
     plt.show()
