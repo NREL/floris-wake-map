@@ -45,8 +45,9 @@ class WakeMap():
                 "x_min", "x_max", "y_min", "y_max"
             candidate_turbine: Turbine type to use for candidate turbines
             candidate_layout: Layout of candidate turbines for group calculation. Should
-                by a 2D numpy array with shape (n_group, 2). If None, will use a circle
-                of diameter group_diameter to define the layout.
+                by a 2D numpy array with shape (n_group, 2), where each row contains the (x,y)
+                location of a candidate. If None, will use a circle of diameter group_diameter to
+                define the layout.
             parallel_max_workers: Maximum number of workers for parallel computation
             external_losses_only: Flag to compute only the external losses for existing turbines.
                 This speeds up computation.
