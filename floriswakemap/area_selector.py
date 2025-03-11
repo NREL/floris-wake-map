@@ -3,12 +3,12 @@ from typing import (
     Dict,
 )
 
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 from floris import layout_visualization as layout_viz
 
 from floriswakemap import WakeMap
+
 
 class AreaSelector():
     """

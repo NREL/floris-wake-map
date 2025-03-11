@@ -1,10 +1,7 @@
-import matplotlib.pyplot as plt
 import numpy as np
-
 from floris import FlorisModel, WindRose
 
 from floriswakemap import WakeMap
-
 
 wind_rose_test = WindRose(
     wind_speeds=np.array([8.0, 10.0]),

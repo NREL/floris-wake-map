@@ -1,18 +1,17 @@
+import logging
+import multiprocessing as mp
+from time import perf_counter
 from typing import (
     Any,
     Dict,
 )
 
-import numpy as np
 import matplotlib.pyplot as plt
-import logging
+import numpy as np
 import pathos
-import multiprocessing as mp
-from time import perf_counter
-from shapely.geometry import Polygon, Point
+from floris import FlorisModel, layout_visualization as layout_viz, WindRose
+from shapely.geometry import Point, Polygon
 
-from floris import FlorisModel, WindRose
-from floris import layout_visualization as layout_viz
 
 class WakeMap():
     """
