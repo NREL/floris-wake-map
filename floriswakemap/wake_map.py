@@ -6,7 +6,8 @@ from typing import Any, Dict
 import matplotlib.pyplot as plt
 import numpy as np
 import pathos
-from floris import FlorisModel, layout_visualization as layout_viz, WindRose
+from floris import FlorisModel, WindRose
+from floris import layout_visualization as layout_viz
 from shapely.geometry import Point, Polygon
 
 
@@ -43,8 +44,8 @@ class WakeMap():
             candidate_turbine: Turbine type to use for candidate turbines
             candidate_cluster_layout: Layout of candidate turbines for group calculation. Should
                 by a 2D numpy array with shape (n_group, 2), where each row contains the (x,y)
-                location of a candidate. If None, will use a circle of diameter candidate_cluster_diameter to
-                define the layout.
+                location of a candidate. If None, will use a circle of diameter
+                candidate_cluster_diameter to define the layout.
             parallel_max_workers: Maximum number of workers for parallel computation
             external_losses_only: Flag to compute only the external losses for existing turbines.
                 This speeds up computation.
@@ -147,7 +148,9 @@ class WakeMap():
             xy = xy[exclusion_mask, :]
 
         # Identify xy pairs that are within limit of any existing turbine and remove
-        existing_xy = np.column_stack([self.fmodel_existing.layout_x, self.fmodel_existing.layout_y])
+        existing_xy = np.column_stack(
+            [self.fmodel_existing.layout_x, self.fmodel_existing.layout_y]
+        )
         existing_mask = np.ones(xy.shape[0], dtype=bool)
         for i in range(existing_xy.shape[0]):
             existing_mask = (
@@ -291,7 +294,8 @@ class WakeMap():
         """
         Compute expected power for candidates, based on FlorisModel.sample_flow_at_points().
         """
-        # Expand to all possible candidate locations. TODO: Consider using ParFlorisModel (Floris v4.3)
+        # Expand to all possible candidate locations.
+        # TODO: Consider using ParFlorisModel (Floris v4.3)
         all_candidates_x2 = np.repeat(self.all_candidates_x, self.candidate_layout.shape[0])
         all_candidates_x2 += np.tile(self.candidate_layout[:, 0], self.all_candidates_x.shape[0])
         all_candidates_y2 = np.repeat(self.all_candidates_y, self.candidate_layout.shape[0])
@@ -463,7 +467,10 @@ class WakeMap():
              for turbine in np.array(self.fmodel_all_candidates.core.farm.turbine_map)[subset]]
         ).reshape(1, -1)*1e3
 
-        group_cfs = np.mean(np.array(self.expected_powers_existing_raw)[:, subset]/rated_powers, axis=1)
+        group_cfs = np.mean(
+            np.array(self.expected_powers_existing_raw)[:, subset]/rated_powers,
+            axis=1
+        )
 
         return group_cfs
 

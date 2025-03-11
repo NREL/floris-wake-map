@@ -37,7 +37,7 @@ if __name__ == "__main__":
         wind_rose_vyw,
         min_dist=nm,
         candidate_cluster_diameter=6000,
-        boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)], # Changed! OK.
+        boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
         external_losses_only=True,
         verbose=True
     )
@@ -60,7 +60,9 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/candidate_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig(
+        "figs/candidate_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png"
+    )
 
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
     ax = wake_map.plot_existing_value(value="capacity_factor")
@@ -68,14 +70,19 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/existing_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig(
+        "figs/existing_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png"
+    )
 
     # Existing map, subset (as for full map).
     # Make a couple of different options here.
-    subset_0 = [50, 51, 52, 53, 54, 60, 61, 62, 63, 64, 70, 71, 72, 73, 74, 80, 81, 82, 83, 84, 90, 91, 92, 93, 94]
-    subset_1 = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34, 40, 41, 42, 43, 44]
+    subset_0 = [50, 51, 52, 53, 54, 60, 61, 62, 63, 64, 70, 71, 72, 73, 74, 80, 81, 82, 83, 84, 90,
+                91, 92, 93, 94]
+    subset_1 = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34, 40, 41,
+                42, 43, 44]
     subset_2 = [35, 36, 37, 45, 46, 47, 55, 56, 57, 65, 66, 67, 75, 76, 77, 85, 86, 87, 95, 96, 97]
-    subset_3 = [5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 25, 26, 27, 28, 29, 38, 39, 48, 49, 58, 59, 68, 69, 78, 79, 88, 89, 98, 99]
+    subset_3 = [5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 25, 26, 27, 28, 29, 38, 39, 48, 49, 58, 59, 68,
+                69, 78, 79, 88, 89, 98, 99]
     subset_4 = subset_2 + subset_3
     subsets = [subset_0, subset_1, subset_2, subset_3, subset_4]
     for s, subset in enumerate(subsets):
@@ -88,6 +95,9 @@ if __name__ == "__main__":
         ax = wake_map.plot_candidate_locations(ax=ax)
         ax.set_aspect("equal")
         fig = ax.get_figure()
-        fig.savefig("figs/subset_{0}_power_map_extonly_vywr_full.png".format(s), dpi=300, bbox_inches="tight", format="png")
+        fig.savefig(
+            "figs/subset_{0}_power_map_extonly_vywr_full.png".format(s),
+            dpi=300, bbox_inches="tight", format="png"
+        )
 
     plt.show()

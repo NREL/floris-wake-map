@@ -263,10 +263,12 @@ class AreaSelector():
 
         #TODO more work here.
         # import ipdb; ipdb.set_trace()
-        # if constraint_dict["value"] == "aep_loss":
-        #     self._constraint_masks_dict[constraint_dict["name"]] = v <= constraint_dict["threshold"]
-        # else:
-        #     self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
+        """
+        if constraint_dict["value"] == "aep_loss":
+            self._constraint_masks_dict[constraint_dict["name"]] = v <= constraint_dict["threshold"]
+        else:
+            self._constraint_masks_dict[constraint_dict["name"]] = v >= constraint_dict["threshold"]
+        """
         if to_plot is None:
             to_plot = list(self._constraint_masks_dict.keys())
 
@@ -275,7 +277,7 @@ class AreaSelector():
             mask_all = mask_all & self._constraint_masks_dict[k]
 
 
-        ctrf = ax.tricontourf(
+        ax.tricontourf(
             self.wake_map.all_candidates_x,
             self.wake_map.all_candidates_y,
             mask_all,
