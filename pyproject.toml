@@ -7,7 +7,7 @@ name = "floriswakemap"
 version = "0.1"
 description = "Map of cluster wake impacts on existing farms for planning new wind farm locations."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Michael (Misha) Sinner", email = "Michael.Sinner@nrel.gov" },
 ]

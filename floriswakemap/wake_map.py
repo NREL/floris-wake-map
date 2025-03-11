@@ -631,27 +631,26 @@ class WakeMap():
         """
         Plot the expected powers of the existing farm.
         """
-        if value == "power":
-            plot_variable = self.process_existing_expected_powers()
-            if colorbar_label is None:
-                colorbar_label = "Existing turbine expected power [MW]"
-        elif value == "capacity_factor":
-            plot_variable = self.process_existing_expected_capacity_factors()
-            if colorbar_label is None:
-                colorbar_label = "Existing turbine capacity factor [-]"
-        elif value == "normalized_power":
-            plot_variable = self.process_existing_expected_normalized_powers()
-            if colorbar_label is None:
-                colorbar_label = "Existing turbine normalized power [-]"
-        elif value == "aep_loss":
-            plot_variable = self.process_existing_aep_loss()
-            if colorbar_label is None:
-                colorbar_label = "Existing farm AEP loss [GWh]"
-        else:
-            raise ValueError(
-                "Invalid type. Must be 'power', 'normalized_power', 'aep_loss', or 'capacity_factor'."
-            )
-        
+        match value:
+            case "power":
+                plot_variable = self.process_existing_expected_powers()
+                colorbar_label_default = "Existing turbine expected power [MW]"
+            case "capacity_factor":
+                plot_variable = self.process_existing_expected_capacity_factors()
+                colorbar_label_default = "Existing turbine capacity factor [-]"
+            case "normalized_power":
+                plot_variable = self.process_existing_expected_normalized_powers()
+                colorbar_label_default = "Existing turbine normalized power [-]"
+            case "aep_loss":
+                plot_variable = self.process_existing_aep_loss()
+                colorbar_label_default = "Existing farm AEP loss [GWh]"
+            case _:
+                raise ValueError(
+                    "Invalid type. Must be 'power', 'normalized_power', 'aep_loss',"
+                    " or 'capacity_factor'."
+                )
+        colorbar_label = colorbar_label_default if colorbar_label is None else colorbar_label
+
         return self.plot_contour(
             plot_variable,
             ax=ax,
@@ -671,26 +670,24 @@ class WakeMap():
         """
         Plot the expected powers of the candidate farm.
         """
-        if value == "power":
-            plot_variable = self.process_candidate_expected_powers()
-            if colorbar_label is None:
-                colorbar_label = "Candidate turbine power [MW]"
-        elif value == "capacity_factor":
-            plot_variable = self.process_candidate_expected_capacity_factors()
-            if colorbar_label is None:
-                colorbar_label = "Candidate turbine capacity factor [-]"
-        elif value == "normalized_power":
-            plot_variable = self.process_candidate_expected_normalized_powers()
-            if colorbar_label is None:
-                colorbar_label = "Candidate turbine normalized power [-]"
-        elif value == "aep_loss":
-            plot_variable = self.process_candidate_aep_loss()
-            if colorbar_label is None:
-                colorbar_label = "Candidate group AEP loss [GWh]"
-        else:
-            raise ValueError(
-                "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
-            )
+        match value:
+            case "power":
+                plot_variable = self.process_candidate_expected_powers()
+                colorbar_label_default = "Candidate turbine power [MW]"
+            case "capacity_factor":
+                plot_variable = self.process_candidate_expected_capacity_factors()
+                colorbar_label_default = "Candidate turbine capacity factor [-]"
+            case "normalized_power":
+                plot_variable = self.process_candidate_expected_normalized_powers()
+                colorbar_label_default = "Candidate turbine normalized power [-]"
+            case "aep_loss":
+                plot_variable = self.process_candidate_aep_loss()
+                colorbar_label_default = "Candidate group AEP loss [GWh]"
+            case _:
+                raise ValueError(
+                    "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
+                )
+        colorbar_label = colorbar_label_default if colorbar_label is None else colorbar_label
         
         return self.plot_contour(
             plot_variable,
@@ -808,14 +805,8 @@ def _compute_expected_powers_existing_single_external_only(
         wind_data=fmodel_existing.wind_data
     )
 
-    # TEMP pulled from FLORIS
     x, y, z = sample_locations(fmodel_existing)
-    ## END TEMP
-    # wind_speeds = fmodel_candidate.sample_flow_at_points(
-    #     x=fmodel_existing.layout_x,
-    #     y=fmodel_existing.layout_y,
-    #     z=fmodel_existing.reference_wind_height * np.ones_like(fmodel_existing.layout_x)
-    # )
+
     wind_speeds = fmodel_candidate.sample_flow_at_points(
         x=x.flatten(),
         y=y.flatten(),
