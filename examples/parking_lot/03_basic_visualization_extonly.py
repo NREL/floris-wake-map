@@ -33,7 +33,7 @@ if __name__ == "__main__":
         fmodel,
         wind_rose_test,
         min_dist=nm,
-        group_diameter=6000,
+        candidate_cluster_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
         external_losses_only=True,
         verbose=True
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     if save_figs:
         fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wake_map.plot_candidate_groups(35, ax=ax)
+    ax = wake_map.plot_candidate_layout(35, ax=ax)
     if save_figs:
         fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 

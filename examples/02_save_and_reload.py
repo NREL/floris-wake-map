@@ -27,7 +27,7 @@ wake_map = WakeMap(
     fmodel,
     wind_rose_test,
     min_dist=nm,
-    group_diameter=6000,
+    candidate_cluster_diameter=6000,
     boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
     verbose=True
 )

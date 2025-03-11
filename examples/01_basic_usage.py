@@ -29,7 +29,7 @@ if __name__ == "__main__":
         fmodel,
         wind_rose_test,
         min_dist=nm,
-        group_diameter=6000,
+        candidate_cluster_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
         verbose=True
     )
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_locations(ax=ax)
     fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wake_map.plot_candidate_groups(35, ax=ax)
+    ax = wake_map.plot_candidate_layout(35, ax=ax)
     fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
     wake_map.compute_raw_expected_powers_serial()
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     subset=range(10)
     es = wake_map.process_existing_expected_powers_subset(subset=subset)
     ax = wake_map.plot_contour(
-        es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine power [MW]"
+        es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine expected power [MW]"
     )
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
