@@ -23,10 +23,10 @@ class WakeMap():
         fmodel: FlorisModel,
         wind_rose: WindRose,
         min_dist: float | None = None,
-        group_diameter: float | None = None,
+        candidate_cluster_diameter: float | None = None,
         boundaries: list[(float, float)] | None = None,
         candidate_turbine = "iea_15MW",
-        candidate_layout: np.typing.NDArray | None = None,
+        candidate_cluster_layout: np.typing.NDArray | None = None,
         exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
         external_losses_only: bool = True,
@@ -40,13 +40,13 @@ class WakeMap():
             fmodel: FlorisModel object
             wind_rose: WindRose object (is this needed? Could come on fmodel?)
             min_dist: Minimum distance between turbines in meters
-            group_diameter: Diameter of the group of turbines in meters
+            candidate_cluster_diameter: Diameter of the group of turbines in meters
             bounding_box: Dictionary of bounding box limits. Should contain keys
                 "x_min", "x_max", "y_min", "y_max"
             candidate_turbine: Turbine type to use for candidate turbines
-            candidate_layout: Layout of candidate turbines for group calculation. Should
+            candidate_cluster_layout: Layout of candidate turbines for group calculation. Should
                 by a 2D numpy array with shape (n_group, 2), where each row contains the (x,y)
-                location of a candidate. If None, will use a circle of diameter group_diameter to
+                location of a candidate. If None, will use a circle of diameter candidate_cluster_diameter to
                 define the layout.
             parallel_max_workers: Maximum number of workers for parallel computation
             external_losses_only: Flag to compute only the external losses for existing turbines.
@@ -94,7 +94,7 @@ class WakeMap():
         self.create_candidate_locations()
 
         # Create candidate group layout
-        self.create_candidate_groups(group_diameter, candidate_layout)
+        self.create_candidate_groups(candidate_cluster_diameter, candidate_cluster_layout)
 
         self._compute_existing_single_function = (
             _compute_expected_powers_existing_single_external_only if external_losses_only
@@ -153,7 +153,10 @@ class WakeMap():
         existing_xy = np.column_stack([self.fmodel_existing.layout_x, self.fmodel_existing.layout_y])
         existing_mask = np.ones(xy.shape[0], dtype=bool)
         for i in range(existing_xy.shape[0]):
-            existing_mask = existing_mask & (np.linalg.norm(xy - existing_xy[i], axis=1) > self.min_dist)
+            existing_mask = (
+                existing_mask
+                & (np.linalg.norm(xy - existing_xy[i], axis=1) > self.min_dist)
+            )
         self.all_candidates_x = xy[existing_mask,0]
         self.all_candidates_y = xy[existing_mask,1]
 
@@ -168,26 +171,33 @@ class WakeMap():
         if self.verbose:
             print(self.n_candidates, "candidate turbine positions created.")
 
-    def create_candidate_groups(self, group_diameter, candidate_layout):
+    def create_candidate_groups(self, candidate_cluster_diameter, candidate_cluster_layout):
         """
         Create turbine candidate groups.
         """
-        # Check only group_diameter or candidate_group are provided
-        if group_diameter is None:
-            group_diameter = 3*self._nautical_mile
+        # Check only candidate_cluster_diameter or candidate_group are provided
+        if candidate_cluster_diameter is None:
+            candidate_cluster_diameter = 3*self._nautical_mile
         
-        # Disregard group_diameter if candidate_group supplied
-        if candidate_layout is None:
-            x = np.arange(0, group_diameter, self.min_dist)
+        # Disregard candidate_cluster_diameter if candidate_group supplied
+        if candidate_cluster_layout is None:
+            x = np.arange(0, candidate_cluster_diameter, self.min_dist)
             x, y = np.meshgrid(x, x)
             xy = np.array([x.flatten(), y.flatten()]).T
-            mask = np.linalg.norm(xy-xy.mean(axis=0, keepdims=True), axis=1) <= group_diameter/2
-            candidate_layout = xy[mask,:]
+            mask = (
+                np.linalg.norm(xy-xy.mean(axis=0, keepdims=True), axis=1)
+                <= candidate_cluster_diameter/2
+            )
+            candidate_cluster_layout = xy[mask,:]
 
-            
-        self.candidate_layout = candidate_layout - candidate_layout.mean(axis=0, keepdims=True)
+        self.candidate_layout = (
+            candidate_cluster_layout
+            - candidate_cluster_layout.mean(axis=0, keepdims=True)
+        )
         if self.verbose:
-            print("Candidate layout created with {0} turbines.".format(self.candidate_layout.shape[0]))
+            print("Candidate cluster created with {0} turbines.".format(
+                self.candidate_layout.shape[0])
+            )
 
     def compute_raw_expected_powers_serial(self, save_in_parts=False, filename=None):
         """
@@ -419,7 +429,7 @@ class WakeMap():
     
     def process_existing_expected_capacity_factors(self):
         """
-        Average over all existing turbines for each candidate.
+        Average capacity factor over turbines.
         """
         self.certify_solved()
 
@@ -427,6 +437,8 @@ class WakeMap():
             [turbine.power_thrust_table["power"].max()
              for turbine in self.fmodel_existing.core.farm.turbine_map]
         ).reshape(1, -1)*1e3
+        # TODO: should this actually be computing the farm-wide CF?
+        # expected_farm_power / rated_farm_power = sum(expected_powers) / sum(rated_powers)?
 
         group_cfs = np.mean(np.array(self.expected_powers_existing_raw)/rated_powers, axis=1)
 
@@ -441,7 +453,7 @@ class WakeMap():
         rated_power = self.fmodel_all_candidates.core.farm.turbine_map[0]\
             .power_thrust_table["power"].max()*1e3
 
-        return self.expected_powers_candidates_raw/rated_power
+        return np.mean(self.expected_powers_candidates_raw, axis=1)/rated_power
 
     def process_existing_expected_capacity_factors_subset(self, subset: list):
         """
