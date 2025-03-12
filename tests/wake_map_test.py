@@ -1,6 +1,5 @@
 import copy
 import os
-import time
 
 import numpy as np
 import pytest
@@ -77,7 +76,7 @@ def test_create_candidate_locations():
                 (wm_test.all_candidates_x[i] - wm_test.all_candidates_x[j])**2 +
                 (wm_test.all_candidates_y[i] - wm_test.all_candidates_y[j])**2
             ) >= 500
-    
+
     # Check minimum distance for existing locations
     for i in range(wm_test.n_candidates):
         for j in range(len(wm_test.fmodel_existing.layout_x)):
@@ -107,7 +106,7 @@ def test_create_candidate_clusters():
 
 def test_compute_raw_expected_powers_serial():
     wm_test.compute_raw_expected_powers_serial()
-    
+
     # Check shapes
     assert (np.array(wm_test.expected_powers_existing_raw).shape
             == (wm_test.n_candidates, len(wm_test.fmodel_existing.layout_x)))
@@ -126,7 +125,7 @@ def test_compute_raw_expected_powers_serial():
 
 def test_compute_raw_expected_powers_parallel():
     wm_test.compute_raw_expected_powers_parallel()
-    
+
     # Check shapes
     assert (np.array(wm_test.expected_powers_existing_raw).shape
             == (wm_test.n_candidates, len(wm_test.fmodel_existing.layout_x)))
