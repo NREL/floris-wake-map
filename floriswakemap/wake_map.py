@@ -91,8 +91,8 @@ class WakeMap():
         self.min_dist = min_dist if min_dist is not None else self._nautical_mile
         self.create_candidate_locations()
 
-        # Create candidate group layout
-        self.create_candidate_groups(candidate_cluster_diameter, candidate_cluster_layout)
+        # Create candidate cluster layout
+        self.create_candidate_clusters(candidate_cluster_diameter, candidate_cluster_layout)
 
         self._compute_existing_single_function = (
             _compute_expected_powers_existing_single_external_only if external_losses_only
@@ -171,7 +171,7 @@ class WakeMap():
         if self.verbose:
             print(self.n_candidates, "candidate turbine positions created.")
 
-    def create_candidate_groups(self, candidate_cluster_diameter, candidate_cluster_layout):
+    def create_candidate_clusters(self, candidate_cluster_diameter, candidate_cluster_layout):
         """
         Create turbine candidate groups.
         """
