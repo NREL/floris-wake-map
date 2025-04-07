@@ -352,7 +352,7 @@ class WakeMap():
 
         return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
 
-    def process_existing_aep_loss(self):
+    def process_existing_aep_loss(self, hours_per_year: float = 8760):
         """
         Compute the AEP loss for each candidate. Reports in GWh.
         """
@@ -366,13 +366,13 @@ class WakeMap():
         aep_losses_each = (
             self.fmodel_existing.get_expected_turbine_powers().reshape(1,-1)
             - np.array(self.expected_powers_existing_raw)
-        ) * 365 * 24 / 1e9 # Report value in GWh
+        ) * hours_per_year / 1e9 # Report value in GWh
 
         existing_losses = aep_losses_each.sum(axis=1)
 
         return existing_losses
 
-    def process_candidate_aep_loss(self):
+    def process_candidate_aep_loss(self, hours_per_year: float = 8760):
         """
         Compute the AEP loss for each candidate. Reports in GWh.
         """
@@ -398,7 +398,7 @@ class WakeMap():
         aep_losses_candidates = (
             no_wake_expected_powers
             - self.expected_powers_candidates_raw
-        ) * 365 * 24 / 1e9 # Report value in GWh
+        ) * hours_per_year / 1e9 # Report value in GWh
 
         # Revert layout
         self.fmodel_all_candidates.set(
@@ -410,7 +410,7 @@ class WakeMap():
 
         return candidate_group_losses
 
-    def process_existing_aep_loss_subset(self, subset: list):
+    def process_existing_aep_loss_subset(self, subset: list, hours_per_year: float = 8760):
         """
         Compute the AEP loss for each candidate. Reports in GWh.
         """
@@ -421,7 +421,7 @@ class WakeMap():
         aep_losses_each = (
             self.fmodel_existing.get_expected_turbine_powers()[subset].reshape(1,-1)
             - np.array(self.expected_powers_existing_raw)[:, subset]
-        ) * 365 * 24 / 1e9
+        ) * hours_per_year / 1e9
 
         group_losses = aep_losses_each.sum(axis=1)
 
