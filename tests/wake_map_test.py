@@ -6,6 +6,10 @@ import pytest
 from floris import FlorisModel, WindRose
 
 from floriswakemap import WakeMap
+from floriswakemap.wake_map import (
+    _compute_expected_powers_existing_single_external_only,
+    sample_locations,
+)
 
 # Set up test data
 wind_rose_test = WindRose(
@@ -300,4 +304,24 @@ def test_save_and_load():
     )
     os.remove("test_save.npz")
 
-# TODO: add tests for helper functions
+# Helper functions
+def test_compute_expected_powers_existing_single_external_only():
+    idx_test = 2
+    out = _compute_expected_powers_existing_single_external_only(
+        wm_test.fmodel_existing,
+        wm_test.fmodel_all_candidates,
+        wm_test.candidate_layout,
+        idx_test
+    )
+
+    assert np.allclose(out, base_expected_powers_existing_raw_44[idx_test,:])
+
+def test_sample_locations():
+    # Run sample_locations and extract x, y, z points
+    x, y, z = sample_locations(wm_test.fmodel_existing)
+
+    # Check they agree with fmodel_existing
+    hub_heights = [t["hub_height"] for t in wm_test.fmodel_existing.core.farm.turbine_definitions]
+    assert np.allclose(np.mean(x, axis=(1,2)), wm_test.fmodel_existing.layout_x)
+    assert np.allclose(np.mean(y, axis=(1,2)), wm_test.fmodel_existing.layout_y)
+    assert np.allclose(np.mean(z, axis=(1,2)), hub_heights)
