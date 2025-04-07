@@ -637,6 +637,77 @@ class WakeMap():
 
         return ax
 
+    def plot_exclusion_zones(
+        self,
+        ax: plt.Axes | None = None,
+        color: str = "yellow",
+        alpha: float = 0.5,
+    ):
+        """
+        Plot the exclusion zones.
+        """
+        if ax is None:
+            _, ax = plt.subplots()
+
+        for ez in self._exclusion_polygons:
+            # Plot zones with border and fill
+            ax.plot(*ez.exterior.xy, color=color)
+            ax.fill(*ez.exterior.xy, color=color, alpha=alpha)
+
+        return ax
+
+    def plot_candidate_boundary(
+        self,
+        ax: plt.Axes | None = None,
+        color: str = "black",
+        alpha: float = 0.2,
+    ):
+        """
+        Plot the boundary.
+        """
+        if ax is None:
+            _, ax = plt.subplots()
+
+        ax.plot(*self._boundary_line.xy, color=color)
+        ax.fill(*self._boundary_polygon.exterior.xy, color=color, alpha=alpha)
+
+        return ax
+
+    def plot_contour(
+        self,
+        values,
+        ax: plt.Axes | None = None,
+        normalizer: float = 1.0,
+        cmap: str | None = None,
+        colorbar_label: str = ""
+    ):
+        """
+        Create a contour plot. Mostly used as a subroutine called by higher-level
+        plotting methods.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.get_figure()
+
+        ctrf = ax.tricontourf(
+            self.all_candidates_x,
+            self.all_candidates_y,
+            values/normalizer,
+            cmap=cmap
+        )
+        cbar = fig.colorbar(ctrf, ax=ax)
+        cbar.set_label(colorbar_label)
+
+        # Cover the area of the existing farm with white
+        for x, y in zip(self.fmodel_existing.layout_x, self.fmodel_existing.layout_y):
+           ax.add_artist(plt.Circle((x, y), self.min_dist, color="white"))
+
+        ax.set_xlabel("X location [m]")
+        ax.set_ylabel("Y location [m]")
+
+        return ax
+
     def plot_existing_value(
         self,
         value: str = "power",
@@ -714,75 +785,6 @@ class WakeMap():
             colorbar_label=colorbar_label
         )
 
-    def plot_contour(
-        self,
-        values,
-        ax: plt.Axes | None = None,
-        normalizer: float = 1.0,
-        cmap: str | None = None,
-        colorbar_label: str = ""
-    ):
-        """
-        Plot the expected powers of the existing farm.
-        """
-        if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = ax.get_figure()
-
-        ctrf = ax.tricontourf(
-            self.all_candidates_x,
-            self.all_candidates_y,
-            values/normalizer,
-            cmap=cmap
-        )
-        cbar = fig.colorbar(ctrf, ax=ax)
-        cbar.set_label(colorbar_label)
-
-        # Cover the area of the existing farm with white
-        for x, y in zip(self.fmodel_existing.layout_x, self.fmodel_existing.layout_y):
-           ax.add_artist(plt.Circle((x, y), self.min_dist, color="white"))
-
-        ax.set_xlabel("X location [m]")
-        ax.set_ylabel("Y location [m]")
-
-        return ax
-
-    def plot_exclusion_zones(
-        self,
-        ax: plt.Axes | None = None,
-        color: str = "yellow",
-        alpha: float = 0.5,
-    ):
-        """
-        Plot the exclusion zones.
-        """
-        if ax is None:
-            _, ax = plt.subplots()
-
-        for ez in self._exclusion_polygons:
-            # Plot zones with border and fill
-            ax.plot(*ez.exterior.xy, color=color)
-            ax.fill(*ez.exterior.xy, color=color, alpha=alpha)
-
-        return ax
-
-    def plot_candidate_boundary(
-        self,
-        ax: plt.Axes | None = None,
-        color: str = "black",
-        alpha: float = 0.2,
-    ):
-        """
-        Plot the boundary.
-        """
-        if ax is None:
-            _, ax = plt.subplots()
-
-        ax.plot(*self._boundary_line.xy, color=color)
-        ax.fill(*self._boundary_polygon.exterior.xy, color=color, alpha=alpha)
-
-        return ax
 
 #### HELPER FUNCTIONS
 def _compute_expected_powers_existing_single(
