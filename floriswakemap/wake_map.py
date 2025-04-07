@@ -794,6 +794,8 @@ def _compute_expected_powers_existing_single(
 ):
     """
     Compute the expected power for a single candidate group.
+
+    Planning to remove this function.
     """
     fmodel_candidate = fmodel_candidates_all.copy()
     fmodel_candidate.set(
@@ -808,7 +810,7 @@ def _compute_expected_powers_existing_single(
 
 def _compute_expected_powers_existing_single_external_only(
     fmodel_existing,
-    fmodel_candidates_all,
+    fmodel_all_candidates,
     candidate_layout,
     candidate_idx
 ):
@@ -816,10 +818,10 @@ def _compute_expected_powers_existing_single_external_only(
     Compute the expected power for a single candidate group, but only considering external turbines.
     """
 
-    fmodel_candidate = fmodel_candidates_all.copy()
+    fmodel_candidate = fmodel_all_candidates.copy()
     fmodel_candidate.set(
-        layout_x=fmodel_candidates_all.layout_x[candidate_idx] + candidate_layout[:, 0],
-        layout_y=fmodel_candidates_all.layout_y[candidate_idx] + candidate_layout[:, 1],
+        layout_x=fmodel_all_candidates.layout_x[candidate_idx] + candidate_layout[:, 0],
+        layout_y=fmodel_all_candidates.layout_y[candidate_idx] + candidate_layout[:, 1],
         wind_data=fmodel_existing.wind_data
     )
 
@@ -887,7 +889,7 @@ def sample_locations(fmodel_existing):
         )
     # Construct the turbine grids
     # Here, they are already rotated to the correct orientation for each wind direction
-    _x = turbine_locs[:, 0, None, None] * template_grid
+    x = turbine_locs[:, 0, None, None] * template_grid
 
     ones_grid = np.ones(
         (fmodel_existing.core.grid.n_turbines,
@@ -896,7 +898,7 @@ def sample_locations(fmodel_existing):
         ),
         dtype=float
     )
-    _y = turbine_locs[:, 1, None, None] + template_grid * ( disc_grid[:, :, None])
-    _z = turbine_locs[:, 2, None, None] + template_grid * ( disc_grid[:, None, :] * ones_grid )
+    y = turbine_locs[:, 1, None, None] + template_grid * ( disc_grid[:, :, None])
+    z = turbine_locs[:, 2, None, None] + template_grid * ( disc_grid[:, None, :] * ones_grid )
 
-    return _x, _y, _z
+    return x, y, z
