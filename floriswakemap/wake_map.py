@@ -435,7 +435,7 @@ class WakeMap():
         self.certify_solved()
 
         rated_powers = np.array(
-            [turbine.power_thrust_table["power"].max()
+            [np.array(turbine.power_thrust_table["power"]).max()
              for turbine in self.fmodel_existing.core.farm.turbine_map]
         ).reshape(1, -1)*1e3
         # TODO: should this actually be computing the farm-wide CF?
@@ -451,8 +451,8 @@ class WakeMap():
         self.certify_solved()
 
         # Only type of candidate turbine
-        rated_power = self.fmodel_all_candidates.core.farm.turbine_map[0]\
-            .power_thrust_table["power"].max()*1e3
+        rated_power = np.array(self.fmodel_all_candidates.core.farm.turbine_map[0]\
+            .power_thrust_table["power"]).max()*1e3
 
         return np.mean(self.expected_powers_candidates_raw, axis=1)/rated_power
 
@@ -463,7 +463,7 @@ class WakeMap():
         self.certify_solved()
 
         rated_powers = np.array(
-            [turbine.power_thrust_table["power"].max()
+            [np.array(turbine.power_thrust_table["power"]).max()
              for turbine in np.array(self.fmodel_all_candidates.core.farm.turbine_map)[subset]]
         ).reshape(1, -1)*1e3
 
