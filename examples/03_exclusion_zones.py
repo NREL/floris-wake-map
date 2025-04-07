@@ -17,11 +17,11 @@ if __name__ == "__main__":
     )
     wind_rose_test.plot()
 
-    save_figs = True
+    save_figs = False
     if save_figs and not os.path.exists("figs"):
         os.makedirs("figs")
 
-    value = "capacity_factor"
+    value = "aep_loss"
 
     fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
@@ -94,9 +94,9 @@ if __name__ == "__main__":
 
     # Existing map, subset (as for full map).
     subset=range(10)
-    es = wake_map.process_existing_expected_capacity_factors_subset(subset=subset)
+    es = wake_map.process_existing_aep_loss_subset(subset=subset)
     ax = wake_map.plot_contour(
-        es, cmap="Blues", colorbar_label="Subset turbine capacity factor [-]"
+        es, cmap="Blues", colorbar_label="Subset farm AEP loss [GWh]"
     )
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})
