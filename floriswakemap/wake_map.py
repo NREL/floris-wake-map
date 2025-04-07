@@ -427,104 +427,6 @@ class WakeMap():
 
         return group_losses
 
-    def process_existing_expected_capacity_factors(self):
-        """
-        Average capacity factor over turbines.
-        """
-        self.certify_solved()
-
-        rated_powers = np.array(
-            [np.array(turbine.power_thrust_table["power"]).max()
-             for turbine in self.fmodel_existing.core.farm.turbine_map]
-        ).reshape(1, -1)*1e3
-        # TODO: should this actually be computing the farm-wide CF?
-        # expected_farm_power / rated_farm_power = sum(expected_powers) / sum(rated_powers)?
-
-        group_cfs = np.mean(np.array(self.expected_powers_existing_raw)/rated_powers, axis=1)
-
-        return group_cfs
-
-    def process_candidate_expected_capacity_factors(self):
-        """
-        """
-        self.certify_solved()
-
-        # Only type of candidate turbine
-        rated_power = np.array(self.fmodel_all_candidates.core.farm.turbine_map[0]\
-            .power_thrust_table["power"]).max()*1e3
-
-        return np.mean(self.expected_powers_candidates_raw, axis=1)/rated_power
-
-    def process_existing_expected_capacity_factors_subset(self, subset: list):
-        """
-        Average over all turbines in subset for each candidate.
-        """
-        self.certify_solved()
-
-        rated_powers = np.array(
-            [np.array(turbine.power_thrust_table["power"]).max()
-             for turbine in np.array(self.fmodel_all_candidates.core.farm.turbine_map)[subset]]
-        ).reshape(1, -1)*1e3
-
-        group_cfs = np.mean(
-            np.array(self.expected_powers_existing_raw)[:, subset]/rated_powers,
-            axis=1
-        )
-
-        return group_cfs
-
-    def process_existing_expected_normalized_powers(self):
-        """
-        Average normalized power including (external or combined) wake loss.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the existing turbines
-        self.fmodel_existing.run_no_wake()
-        no_wake_expected_powers = self.fmodel_existing.get_expected_turbine_powers()
-        normalized_expected_powers = (
-            np.array(self.expected_powers_existing_raw)
-            / no_wake_expected_powers.reshape(1,-1)
-        )
-
-        group_neps = np.mean(normalized_expected_powers, axis=1)
-
-        return group_neps
-
-    def process_candidate_expected_normalized_powers(self):
-        """
-        Average normalized power including (external or combined) wake loss.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the candidate
-        self.fmodel_all_candidates.run_no_wake()
-        no_wake_expected_powers = self.fmodel_all_candidates.get_expected_turbine_powers()
-        normalized_expected_powers = (
-            np.array(self.expected_powers_candidates_raw)
-            / no_wake_expected_powers
-        )
-
-        return normalized_expected_powers
-
-    def process_existing_expected_normalized_powers_subset(self, subset: list):
-        """
-        Average normalized power including (external or combined) wake loss.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the existing turbines
-        self.fmodel_existing.run_no_wake()
-        no_wake_expected_powers = self.fmodel_existing.get_expected_turbine_powers()
-        normalized_expected_powers = (
-            np.array(self.expected_powers_existing_raw)[:, subset]
-            / no_wake_expected_powers[subset].reshape(1,-1)
-        )
-
-        group_neps = np.mean(normalized_expected_powers, axis=1)
-
-        return group_neps
-
     def save_raw_expected_powers(self, filename: str):
         """
         Save the raw expected powers to a file.
@@ -719,22 +621,15 @@ class WakeMap():
         Plot the expected powers of the existing farm.
         """
         match value: # noqa: E999
-            case "power":
+            case "power" | "expected_power":
                 plot_variable = self.process_existing_expected_powers()
                 colorbar_label_default = "Existing turbine expected power [MW]"
-            case "capacity_factor":
-                plot_variable = self.process_existing_expected_capacity_factors()
-                colorbar_label_default = "Existing turbine capacity factor [-]"
-            case "normalized_power":
-                plot_variable = self.process_existing_expected_normalized_powers()
-                colorbar_label_default = "Existing turbine normalized power [-]"
             case "aep_loss":
                 plot_variable = self.process_existing_aep_loss()
                 colorbar_label_default = "Existing farm AEP loss [GWh]"
             case _:
                 raise ValueError(
-                    "Invalid type. Must be 'power', 'normalized_power', 'aep_loss',"
-                    " or 'capacity_factor'."
+                    "Invalid type. Must be 'power', 'expected_power', or 'aep_loss'."
                 )
         colorbar_label = colorbar_label_default if colorbar_label is None else colorbar_label
 
@@ -758,21 +653,15 @@ class WakeMap():
         Plot the expected powers of the candidate farm.
         """
         match value:
-            case "power":
+            case "power" | "expected_power":
                 plot_variable = self.process_candidate_expected_powers()
                 colorbar_label_default = "Candidate turbine power [MW]"
-            case "capacity_factor":
-                plot_variable = self.process_candidate_expected_capacity_factors()
-                colorbar_label_default = "Candidate turbine capacity factor [-]"
-            case "normalized_power":
-                plot_variable = self.process_candidate_expected_normalized_powers()
-                colorbar_label_default = "Candidate turbine normalized power [-]"
             case "aep_loss":
                 plot_variable = self.process_candidate_aep_loss()
                 colorbar_label_default = "Candidate group AEP loss [GWh]"
             case _:
                 raise ValueError(
-                    "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
+                    "Invalid type. Must be 'power', 'expected_power', or 'aep_loss'."
                 )
         colorbar_label = colorbar_label_default if colorbar_label is None else colorbar_label
 

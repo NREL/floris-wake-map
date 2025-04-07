@@ -258,14 +258,6 @@ def test_process_existing_aep_loss_subset():
         expected_power_loss * hours_per_year
     )
 
-# Will not test the following, as they will be retired in an upcoming pull request:
-# - process_existing_expected_capacity_factors
-# - process_candidate_expected_capacity_factors
-# - process_existing_expected_capacity_factors_subset
-# - process_existing_expected_normalized_powers
-# - process_candidate_expected_normalized_powers
-# - process_existing_expected_normalized_powers_subset
-
 def test_plotting_integration():
     # Won't be checking the outputs of these; just checking that they run without error.
     value_options = ["power", "aep_loss"]
