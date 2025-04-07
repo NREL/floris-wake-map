@@ -142,7 +142,56 @@ def test_compute_raw_expected_powers_parallel():
         base_expected_powers_existing_raw_44
     )
 
-# TODO: add tests for processing methods
+def test_compute_expected_powers_candidates():
+    # Already compute in previous tests, but this will check test_compute_expected_powers_candidates
+    # specifically.
+
+    wm_test.compute_expected_powers_candidates()
+    assert (wm_test.expected_powers_candidates_raw.shape
+            == (wm_test.n_candidates, wm_test.candidate_layout.shape[0]))
+    assert np.allclose(
+        wm_test.expected_powers_candidates_raw[:4,:4],
+        base_expected_powers_candidates_raw_44
+    )
+
+# TODO: add tests for processing methods:
+# - process_existing_expected_powers
+# - process_candidate_expected_powers
+# - process_existing_expected_powers_subset
+# - process_existing_aep_loss
+# - process_candidate_aep_loss
+# - process_existing_aep_loss_subset
+
+# Will not test the following, as they will be retired in an upcoming pull request:
+# - process_existing_expected_capacity_factors
+# - process_candidate_expected_capacity_factors
+# - process_existing_expected_capacity_factors_subset
+# - process_existing_expected_normalized_powers
+# - process_candidate_expected_normalized_powers
+# - process_existing_expected_normalized_powers_subset
+
+def test_plotting_integration():
+    # Won't be checking the outputs of these; just checking that they run without error.
+    value_options = ["power", "aep_loss"]
+
+    # Layout plots
+    ax = wm_test.plot_existing_farm()
+    ax = wm_test.plot_candidate_locations(ax=ax)
+    with pytest.raises(TypeError):
+        wm_test.plot_candidate_layout(ax=ax) # Missing required argument candidate_idx
+    ax = wm_test.plot_candidate_layout(candidate_idx=0, ax=ax)
+    ax = wm_test.plot_exclusion_zones()
+    ax = wm_test.plot_candidate_boundary()
+
+    # Low-level contour plot
+    with pytest.raises(TypeError):
+        wm_test.plot_contour() # Missing required argument values
+    ax = wm_test.plot_contour(values=wm_test.process_existing_expected_powers())
+
+    # High-level contour plots
+    for v in value_options:
+        ax = wm_test.plot_existing_value(v)
+        ax = wm_test.plot_candidate_value(v)
 
 def test_save_and_load():
     wm_test.save_raw_expected_powers("test_save.npz")
@@ -158,3 +207,5 @@ def test_save_and_load():
         base_expected_powers_existing_raw_44
     )
     os.remove("test_save.npz")
+
+# TODO: add tests for helper functions

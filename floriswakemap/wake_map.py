@@ -6,8 +6,7 @@ from typing import Any, Dict
 import matplotlib.pyplot as plt
 import numpy as np
 import pathos
-from floris import FlorisModel, WindRose
-from floris import layout_visualization as layout_viz
+from floris import FlorisModel, layout_visualization as layout_viz, WindRose
 from shapely.geometry import Point, Polygon
 
 
