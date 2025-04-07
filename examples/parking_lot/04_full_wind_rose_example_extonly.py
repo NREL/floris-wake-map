@@ -64,7 +64,9 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/candidate_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig(
+        "figs/candidate_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png"
+    )
 
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
     ax = wake_map.plot_existing_value(value="capacity_factor")
@@ -72,7 +74,9 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/existing_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig(
+        "figs/existing_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png"
+    )
 
     # Existing map, subset (as for full map).
     # Make a couple of different options here.
@@ -86,7 +90,9 @@ if __name__ == "__main__":
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
     fig = ax.get_figure()
-    fig.savefig("figs/subset_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png")
+    fig.savefig(
+        "figs/subset_power_map_extonly_vywr_full.png", dpi=300, bbox_inches="tight", format="png"
+    )
 
     wake_map.save_raw_expected_powers("raw_expected_powers_vywr_full.npz")
 

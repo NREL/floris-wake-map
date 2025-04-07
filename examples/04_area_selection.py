@@ -8,7 +8,9 @@ if __name__ == "__main__":
     wind_rose_test = WindRose(
         wind_speeds=np.array([8.0, 10.0]),
         wind_directions=np.array([45.0, 90.0, 135.0, 180.0, 225.0, 270.0]),
-        freq_table=np.array([[0.2, 0.05], [0.2, 0.05], [0.0, 0.0], [0.0, 0.0], [0.37, 0.38], [0.5, 0.25]]),
+        freq_table=np.array(
+            [[0.2, 0.05], [0.2, 0.05], [0.0, 0.0], [0.0, 0.0], [0.37, 0.38], [0.5, 0.25]]
+        ),
         ti_table=0.06
     )
 
@@ -75,7 +77,7 @@ if __name__ == "__main__":
     ax_c = wake_map.plot_candidate_locations(ax=ax_c)
     ax_c = wake_map.plot_exclusion_zones(ax=ax_c)
     ax_c = area_selector.plot_selection(ax=ax_c)
-    
+
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
     ax_e = wake_map.plot_existing_value(value=value)
     ax_e.set_aspect("equal")

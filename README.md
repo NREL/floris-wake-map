@@ -3,7 +3,7 @@
 The floris-wake-map repository is a set of tools for creating maps of cluster
 wake impacts based on the wind farm modeling tool [FLORIS](https://github.com/nrel/floris).
 
-The `floriswakemap` package comprises two main modules: the `wake_map` module, dedicated to the 
+The `floriswakemap` package comprises two main modules: the `wake_map` module, dedicated to the
 `WakeMap` class, and the `area_selector` module, dedicated to the `AreaSelector` class.
 The `WakeMap` class is used to generate maps of wake impacts on both new and existing wind farm
 clusters, while the `AreaSelector` class provides selections of candidate areas for new developments
@@ -17,7 +17,7 @@ following from your shell:
 git clone https://github.com/nrel/floris
 ```
 
-We recommend that you install `floriswakemap` into a conda environment. To create a conda 
+We recommend that you install `floriswakemap` into a conda environment. To create a conda
 environment and activate it, use
 ```
 conda create --name my-environment python
@@ -39,7 +39,7 @@ and confirming that the output provides information about the package.
 
 ## Getting started
 
-To get familiar with the `floriswakemap`, we recommend working through the examples (in the 
+To get familiar with the `floriswakemap`, we recommend working through the examples (in the
 examples/ subdirectory) in numerical order. In particular:
 - 01_basic_usage.py demonstrates the main workflow for using `WakeMap` with an instantiated
 `FlorisModel` and how to generate visualizations.
@@ -51,7 +51,7 @@ select feasible and least-cost development areas.
 - 05_full_example.py demonstrates many features in a larger problem, which takes a while to run and
 should be run only once users are comfortable with the preceding examples.
 
-Note that under the hood, `WakeMap` calculations using `compute_raw_expected_powers_parallel()` 
-(the main simulation method) are designed to run in parallel across multiple cores. To run 
+Note that under the hood, `WakeMap` calculations using `compute_raw_expected_powers_parallel()`
+(the main simulation method) are designed to run in parallel across multiple cores. To run
 serially, instead use `compute_raw_expected_powers_serial()`. This will be considerably slower
 to run, depending on the availability of parallel computational resources.

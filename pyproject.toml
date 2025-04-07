@@ -20,9 +20,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "floris~=4.0",
+    "floris~=4.3",
     "matplotlib~=3.8",
-    "numpy~=1.20",
+    "numpy~=2.0",
     "pandas~=2.0",
     "scipy~=1.1",
     "shapely~=2.0",
@@ -43,7 +43,6 @@ develop = [
     "pytest",
     "pre-commit",
     "ruff",
-    "isort"
 ]
 
 [tool.setuptools.packages.find]
@@ -99,10 +98,8 @@ exclude = [
 src = ["floriswakemap", "tests"]
 line-length = 100
 target-version = "py310"
-extend-include = ["*.ipynb"]
+#extend-include = ["*.ipynb"]
 
-
-[tool.ruff.lint]
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
@@ -119,14 +116,14 @@ ignore = ["E712"]
 fixable = ["E", "F", "I", "D"]
 unfixable = []
 
-[tool.ruff.lint.isort]
+[tool.ruff.isort]
 combine-as-imports = true
 known-first-party = ["floriswakemap"]
 order-by-type = false
 
 # [tool.ruff.format]
 
-[tool.ruff.lint.per-file-ignores]
+[tool.ruff.per-file-ignores]
 # Ignore `F401` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
 "__init__.py" = ["F401"]
 
@@ -137,5 +134,5 @@ order-by-type = false
 "examples/*" = ["D"]
 "docs/*" = ["D"]
 
-[tool.ruff.lint.pydocstyle]
+[tool.ruff.pydocstyle]
 convention = "google"

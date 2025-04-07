@@ -20,7 +20,9 @@ if __name__ == "__main__":
     wind_rose_test = WindRose(
         wind_speeds=wind_speeds,
         wind_directions=wind_directions,
-        freq_table=np.array([[0.2, 0.05], [0.2, 0.05], [0.0, 0.0], [0.0, 0.0], [0.37, 0.38], [0.5, 0.25]]),
+        freq_table=np.array(
+            [[0.2, 0.05], [0.2, 0.05], [0.0, 0.0], [0.0, 0.0], [0.37, 0.38], [0.5, 0.25]]
+        ),
         ti_table=0.06,
         heterogeneous_map=heterogeneous_map,
     )
@@ -80,7 +82,9 @@ if __name__ == "__main__":
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig("figs/candidate_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig(
+            "figs/candidate_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png"
+        )
 
     # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
     ax = wake_map.plot_existing_value(value=value)
@@ -89,7 +93,9 @@ if __name__ == "__main__":
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig("figs/existing_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig(
+            "figs/existing_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png"
+        )
 
     # Existing map, subset (as for full map).
     # subset=range(10)
@@ -105,7 +111,9 @@ if __name__ == "__main__":
     # ax.set_aspect("equal")
     # fig = ax.get_figure()
     # if save_figs:
-    #     fig.savefig("figs/subset_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png")
+    #     fig.savefig(
+    #         "figs/subset_power_map_extonly.png", dpi=300, bbox_inches="tight", format="png"
+    #     )
 
     # # Look at AEP loss
     # al = wake_map.process_existing_aep_loss()
