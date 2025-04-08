@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     value = "aep_loss"
 
-    fmodel = FlorisModel("inputs/gch.yaml")
+    fmodel = FlorisModel("defaults")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
     nm = 1852
     x_pos = np.linspace(0, 9*nm, 10)
