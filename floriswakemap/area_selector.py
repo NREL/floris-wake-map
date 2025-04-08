@@ -11,12 +11,19 @@ class AreaSelector():
     """
     Class for identifying candidate regions for new development based on a WakeMap.
     """
+
     def __init__(self, wake_map: WakeMap, verbose: bool = True):
         """
         Constructor for the AreaSelector class.
 
         Receives instantiated WakeMap object and checks that the main maps have been
         computed.
+
+        Args:
+            wake_map: The WakeMap object to use for area selection.
+            verbose: verbosity flag
+        Returns:
+            Instantiated AreaSelector object.
         """
 
         if not wake_map.solved:
@@ -34,7 +41,23 @@ class AreaSelector():
 
         self._state = 0 # Initialized
 
-    def add_constraint(self, constraint_dict):
+    def add_constraint(self, constraint_dict: Dict[str, Any]):
+        """
+        Add value constraint to the area selection process.
+
+        Args:
+            constraint_dict: Dictionary containing the constraint information.
+                Must contain keys: turbines, value, threshold, name
+                turbines: "existing" or "candidates"
+                value: "expected_power" or "aep_loss"
+                threshold: float value for the constraint (upper limit for "expected_power", upper
+                    limit for "aep_loss")
+                name: string name for the constraint
+                subset: list of indices for the subset of existing turbines to apply the constraint
+                    to (optional)
+        Returns:
+            None
+        """
 
         required_keys = ["turbines", "value", "threshold", "name"]
 
@@ -47,14 +70,13 @@ class AreaSelector():
                 "Constraint dictionary key 'turbines' must be either 'existing' or 'candidate'."
             )
 
-        #if constraint_dict["value"] not in ["power", "AEP"]:
-        #    raise ValueError("Constraint dictionary key 'value' must be either 'power' or 'AEP'.")
-
         if "subset" in constraint_dict.keys():
             if not isinstance(constraint_dict["subset"], list):
                 raise ValueError("Constraint dictionary key 'subset' must be a list of integers.")
             if constraint_dict["turbines"] != "existing":
                 raise ValueError("Subset constraints only allowed for existing turbines.")
+        else:
+            constraint_dict["subset"] = None
 
         if self.verbose:
             print("Applying constraint: {0}".format(constraint_dict))
@@ -62,55 +84,27 @@ class AreaSelector():
         if constraint_dict["name"] in self._constraint_masks_dict.keys():
             raise ValueError("Constraint name already in use.")
 
-        # See about better handling here, if possible.
-
         if constraint_dict["turbines"] == "existing":
-            if "subset" in constraint_dict.keys():
-                if constraint_dict["value"] == "power":
-                    v = self.wake_map.process_existing_expected_powers_subset(
-                        subset=constraint_dict["subset"]
-                    )
-                elif constraint_dict["value"] == "capacity_factor":
-                    v = self.wake_map.process_existing_expected_capacity_factors_subset(
-                        subset=constraint_dict["subset"]
-                    )
-                elif constraint_dict["value"] == "normalized_power":
-                    v = self.wake_map.process_existing_expected_normalized_powers_subset(
-                        subset=constraint_dict["subset"]
-                    )
-                elif constraint_dict["value"] == "aep_loss":
-                    v = self.wake_map.process_existing_aep_loss_subset(
-                        subset=constraint_dict["subset"]
-                    )
-                else:
-                    # Should already have checked, so this shouldn't happen.
-                    raise ValueError("Invalid value for constraint_dict['value']")
+            if constraint_dict["value"] == "expected_power" or constraint_dict["value"] == "power":
+                v = self.wake_map.process_existing_expected_powers(
+                    subset=constraint_dict["subset"]
+                )
+            elif constraint_dict["value"] == "aep_loss":
+                v = self.wake_map.process_existing_aep_loss(
+                    subset=constraint_dict["subset"]
+                )
             else:
-                if constraint_dict["value"] == "power":
-                    v = self.wake_map.process_existing_expected_powers()
-                elif constraint_dict["value"] == "capacity_factor":
-                    v = self.wake_map.process_existing_expected_capacity_factors()
-                elif constraint_dict["value"] == "normalized_power":
-                    v = self.wake_map.process_existing_expected_normalized_powers()
-                elif constraint_dict["value"] == "aep_loss":
-                    v = self.wake_map.process_existing_aep_loss()
-                else:
-                    # Should already have checked, so this shouldn't happen.
-                    raise ValueError("Invalid value for constraint_dict['value']")
+                raise ValueError("Invalid value for constraint_dict['value']")
+
         elif constraint_dict["turbines"] == "candidates":
-            if constraint_dict["value"] == "power":
+            if constraint_dict["value"] == "expected_power" or constraint_dict["value"] == "power":
                 v = self.wake_map.process_candidate_expected_powers()
-            elif constraint_dict["value"] == "capacity_factor":
-                v = self.wake_map.process_candidate_expected_capacity_factors()
-            elif constraint_dict["value"] == "normalized_power":
-                v = self.wake_map.process_candidate_expected_normalized_powers()
             elif constraint_dict["value"] == "aep_loss":
                 v = self.wake_map.process_candidate_aep_loss()
             else:
-                # Should already have checked, so this shouldn't happen.
                 raise ValueError("Invalid value for constraint_dict['value']")
+
         else:
-            # Should already have checked, so this shouldn't happen.
             raise ValueError("Invalid value for constraint_dict['turbines']")
 
         if constraint_dict["value"] == "aep_loss":
@@ -123,10 +117,26 @@ class AreaSelector():
         self._state = 1 # Constraints added, selection can proceed
 
     def reset_constraints(self):
+        """
+        Reset the constraints for the area selection process.
+
+        Args:
+            None
+        Returns:
+            None
+        """
         self._constraint_masks_dict = {}
         self._constraints_list = []
 
     def report_constraints(self):
+        """
+        Print out the constraints that have been added.
+
+        Args:
+            None
+        Returns:
+            None (prints to console)
+        """
 
         if self._constraint_masks_dict == {}:
             print("No constraints have been added.\n")
@@ -136,11 +146,19 @@ class AreaSelector():
             print("Constraint: {0}".format(n))
             print("Turbine candidates meeting constraint: {0:.2f}%\n".format(sum(m)/len(m)*100))
 
-        return
-
-    def add_objective(self, objective_dict):
-        # TODO: add this in
-        self._state = 1 # Objective added, selection can proceed
+    def add_objective(self, objective_dict: Dict[str, Any]):
+        """
+        Add an objective to the area selection process.
+        Args:
+            objective_dict: Dictionary containing the objective information.
+                Must contain keys: value, candidates_weight, existing_weight, n_target
+                value: "power", "capacity_factor", "normalized_power", or "aep_loss"
+                candidates_weight: weight for candidate turbines
+                existing_weight: weight for existing turbines
+                n_target: number of turbines to select
+        Returns:
+            None
+        """
 
         required_keys = ["value", "candidates_weight", "existing_weight", "n_target"]
 
@@ -153,14 +171,35 @@ class AreaSelector():
                 raise ValueError("Objective dictionary key '{0}' must be a number.".format(key))
 
         # TODO: handle subsets
+        if "subset" in objective_dict.keys():
+            raise NotImplementedError("Objectives for subsets have not yet been implemented.")
+
         self._objective_dict = objective_dict
 
         self._state = 1 # Objective added, selection can proceed
 
     def reset_objective(self):
+        """
+        Reset the objective(s) for the area selection process.
+
+        Args:
+            None
+        Returns:
+            None
+        """
+
         self._objective_dict = {}
 
     def report_objective(self):
+        """
+        Print out the objectives that have been added.
+
+        Args:
+            None
+        Returns:
+            None (prints to console)
+        """
+
         if self._objective_dict == {}:
             print("No objective has been added.\n")
             return
@@ -170,6 +209,14 @@ class AreaSelector():
         return
 
     def select_candidates(self):
+        """
+        Select candidate locations based on previously-added constraints and objectives.
+
+        Args:
+            None
+        Returns:
+            None
+        """
         if self._state != 1:
             raise RuntimeError(
                 "Cannot select candidates until constraints or objective have been added."
@@ -225,6 +272,15 @@ class AreaSelector():
         ax: plt.Axes | None = None,
         plotting_dict: Dict[str, Any] = {}
     ):
+        """
+        Plot the selected candidate locations.
+
+        Args:
+            ax: Axes object to plot on. If None, new axes will be created.
+            plotting_dict: Dictionary of plotting options
+        Returns:
+            ax: Axes object with the selected candidate locations plotted.
+        """
 
         if self._state != 2:
             raise RuntimeError("Cannot plot selection until candidates have been selected.")
@@ -232,11 +288,7 @@ class AreaSelector():
         if ax is None:
             _, ax = plt.subplots()
 
-        # ax = self.wake_map.plot_existing_farm(ax=ax)
-        # ax = self.wake_map.plot_candidate_locations(ax=ax)
-        # ax = self.wake_map.plot_exclusion_zones(ax=ax)
-
-        # Green for selected candidate locations
+        # Default to green for selected candidate locations
         if "color" not in plotting_dict.keys():
             plotting_dict["color"] = "green"
 
@@ -255,6 +307,16 @@ class AreaSelector():
         to_plot: list | None = None,
         plotting_dict: Dict[str, Any] = {}
     ):
+        """
+        UNDER DEVELOPMENT: Plot the constraints that have been added.
+
+        Args:
+            ax: Axes object to plot on. If None, new axes will be created.
+            to_plot: List of constraint names to plot. If None, all constraints will be plotted.
+            plotting_dict: Dictionary of plotting options
+        Returns:
+            ax: Axes object with the constraints plotted.
+        """
         if self._state < 1:
             raise RuntimeError("Cannot plot constraints until constraints have been added.")
 
@@ -262,7 +324,6 @@ class AreaSelector():
             _, ax = plt.subplots()
 
         #TODO more work here.
-        # import ipdb; ipdb.set_trace()
         """
         if constraint_dict["value"] == "aep_loss":
             self._constraint_masks_dict[constraint_dict["name"]] = v <= constraint_dict["threshold"]
@@ -295,6 +356,16 @@ class AreaSelector():
         cmap: str="viridis",
         plotting_dict: Dict[str, Any] = {}
     ):
+        """
+        UNDER DEVELOPMENT: Plot the combined objective function across the area.
+
+        Args:
+            ax: Axes object to plot on. If None, new axes will be created.
+            cmap: Colormap to use for the objective function.
+            plotting_dict: Dictionary of plotting options
+        Returns:
+            ax: Axes object with the constraints plotted.
+        """
         if self._state < 2:
             raise RuntimeError("Cannot plot objective until objective has been added.")
 
