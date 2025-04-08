@@ -59,7 +59,7 @@ if __name__ == "__main__":
     ce = wake_map.process_candidate_expected_powers()
 
     # Candidate map
-    ax = wake_map.plot_candidate_value(value="power", normalizer=1e6)
+    ax = wake_map.plot_candidate_value(value="expected_power", normalizer=1e6)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         fig.savefig("figs/candidate_power_map.png", dpi=300, bbox_inches="tight", format="png")
 
     # Existing map
-    ax = wake_map.plot_existing_value(value="power", normalizer=1e6)
+    ax = wake_map.plot_existing_value(value="expected_power", normalizer=1e6)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
     ax.set_aspect("equal")
@@ -78,9 +78,11 @@ if __name__ == "__main__":
 
     # Existing map, subset
     subset=range(10)
-    es = wake_map.process_existing_expected_powers(subset=subset)
-    ax = wake_map.plot_contour(
-        es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine expected power [MW]"
+    ax = wake_map.plot_existing_value(
+        value="expected_power",
+        normalizer=1e6,
+        subset=subset,
+        cmap="Blues"
     )
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_existing_farm(ax=ax, subset=subset, plotting_dict={"color": "red"})

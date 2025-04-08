@@ -587,7 +587,8 @@ class WakeMap():
 
     def plot_existing_value(
         self,
-        value: str = "power",
+        value: str = "expected_power",
+        subset: list | None = None,
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         colorbar_label: str | None = None,
@@ -595,13 +596,21 @@ class WakeMap():
     ):
         """
         Plot the expected powers of the existing farm.
+
+        Args:
+            value: Type of value to plot. Options are "expected_power" or "aep_loss".
+            subset: List of indices to use for the existing turbines to evaluate
+            ax: Matplotlib axes object
+            normalizer: Normalizer for the color scale
+            colorbar_label: Label for the colorbar
+            cmap: Colormap to use
         """
         match value: # noqa: E999
-            case "power" | "expected_power":
-                plot_variable = self.process_existing_expected_powers()
+            case "expected_power" | "power":
+                plot_variable = self.process_existing_expected_powers(subset=subset)
                 colorbar_label_default = "Existing turbine expected power [MW]"
             case "aep_loss":
-                plot_variable = self.process_existing_aep_loss()
+                plot_variable = self.process_existing_aep_loss(subset=subset)
                 colorbar_label_default = "Existing farm AEP loss [GWh]"
             case _:
                 raise ValueError(
@@ -619,7 +628,7 @@ class WakeMap():
 
     def plot_candidate_value(
         self,
-        value: str = "power",
+        value: str = "expected_power",
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         colorbar_label: str | None = None,
@@ -627,9 +636,16 @@ class WakeMap():
     ):
         """
         Plot the expected powers of the candidate farm.
+
+        Args:
+            value: Type of value to plot. Options are "expected_power" or "aep_loss".
+            ax: Matplotlib axes object
+            normalizer: Normalizer for the color scale
+            colorbar_label: Label for the colorbar
+            cmap: Colormap to use
         """
         match value:
-            case "power" | "expected_power":
+            case "expected_power" | "power":
                 plot_variable = self.process_candidate_expected_powers()
                 colorbar_label_default = "Candidate turbine power [MW]"
             case "aep_loss":
