@@ -223,7 +223,7 @@ class WakeMap():
 
         Args:
             save_in_parts: Flag to save the expected powers in parts
-            filename: Filename to save to (if None and save_in_parts is True, defaults to 
+            filename: Filename to save to (if None and save_in_parts is True, defaults to
                 "expected_powers")
         Returns:
             None
