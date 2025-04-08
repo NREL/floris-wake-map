@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     # Existing map, subset
     subset=range(10)
-    es = wake_map.process_existing_expected_powers_subset(subset=subset)
+    es = wake_map.process_existing_expected_powers(subset=subset)
     ax = wake_map.plot_contour(
         es, normalizer=1e6, cmap="Blues", colorbar_label="Subset turbine expected power [MW]"
     )

@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     # Existing map, subset (as for full map).
     subset=range(10)
-    es = wake_map.process_existing_aep_loss_subset(subset=subset)
+    es = wake_map.process_existing_aep_loss(subset=subset)
     ax = wake_map.plot_contour(
         es, cmap="Blues", colorbar_label="Subset farm AEP loss [GWh]"
     )

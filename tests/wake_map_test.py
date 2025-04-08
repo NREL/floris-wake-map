@@ -164,21 +164,21 @@ def test_process_existing_expected_powers():
     assert out.shape[0] == wm_test.n_candidates
     assert np.allclose(out, np.mean(wm_test.expected_powers_existing_raw, axis=1))
 
-def test_process_candidate_expected_powers():
-    out = wm_test.process_candidate_expected_powers()
-
-    assert out.shape[0] == wm_test.n_candidates
-    assert np.allclose(out, np.mean(wm_test.expected_powers_candidates_raw, axis=1))
-
-def test_process_existing_expected_powers_subset():
+    # Test on a subset
     subset = [2,3]
-    out = wm_test.process_existing_expected_powers_subset(subset)
+    out = wm_test.process_existing_expected_powers(subset)
 
     assert out.shape[0] == wm_test.n_candidates
     assert np.allclose(
         out,
         np.mean(np.array(wm_test.expected_powers_existing_raw)[:,subset], axis=1)
     )
+
+def test_process_candidate_expected_powers():
+    out = wm_test.process_candidate_expected_powers()
+
+    assert out.shape[0] == wm_test.n_candidates
+    assert np.allclose(out, np.mean(wm_test.expected_powers_candidates_raw, axis=1))
 
 def test_process_existing_aep_loss():
     hours_per_year_default = 8760
@@ -206,6 +206,31 @@ def test_process_existing_aep_loss():
         expected_power_loss * hours_per_year
     )
 
+    # Test a subset
+    subset = [2,3]
+    out = wm_test.process_existing_aep_loss(subset)
+    assert out.shape[0] == wm_test.n_candidates
+
+    wm_test.fmodel_existing.run_no_wake()
+    unwaked_powers = wm_test.fmodel_existing.get_expected_turbine_powers()[subset]
+    expected_power_loss = np.sum(
+        unwaked_powers.reshape(1, len(subset))
+        - np.array(wm_test.expected_powers_existing_raw)[:,subset],
+        axis = 1
+    ) / 1e9
+    assert np.allclose(
+        out,
+        expected_power_loss * hours_per_year_default
+    )
+
+    hours_per_year = 1000
+    out = wm_test.process_existing_aep_loss(subset, hours_per_year=hours_per_year)
+    assert out.shape[0] == wm_test.n_candidates
+    assert np.allclose(
+        out,
+        expected_power_loss * hours_per_year
+    )
+
 def test_process_candidate_aep_loss():
     hours_per_year_default = 8760
     out = wm_test.process_candidate_aep_loss()
@@ -226,32 +251,6 @@ def test_process_candidate_aep_loss():
     # Test with a different number of hours
     hours_per_year = 1000
     out = wm_test.process_candidate_aep_loss(hours_per_year=hours_per_year)
-    assert out.shape[0] == wm_test.n_candidates
-    assert np.allclose(
-        out,
-        expected_power_loss * hours_per_year
-    )
-
-def test_process_existing_aep_loss_subset():
-    subset = [2,3]
-    hours_per_year_default = 8760
-    out = wm_test.process_existing_aep_loss_subset(subset)
-    assert out.shape[0] == wm_test.n_candidates
-
-    wm_test.fmodel_existing.run_no_wake()
-    unwaked_powers = wm_test.fmodel_existing.get_expected_turbine_powers()[subset]
-    expected_power_loss = np.sum(
-        unwaked_powers.reshape(1, len(subset))
-        - np.array(wm_test.expected_powers_existing_raw)[:,subset],
-        axis = 1
-    ) / 1e9
-    assert np.allclose(
-        out,
-        expected_power_loss * hours_per_year_default
-    )
-
-    hours_per_year = 1000
-    out = wm_test.process_existing_aep_loss_subset(subset, hours_per_year=hours_per_year)
     assert out.shape[0] == wm_test.n_candidates
     assert np.allclose(
         out,

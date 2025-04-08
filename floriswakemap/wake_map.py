@@ -192,7 +192,7 @@ class WakeMap():
         Compute the turbine expected power for each candidate group; as well as for the existing
         farm.
         """
-        self.expected_powers_existing_raw = []
+        expected_powers_existing_raw_list = []
         t_start = perf_counter()
         for i in range(self.n_candidates):
             if len(self.fmodel_existing.layout_x) > 1000:
@@ -208,13 +208,14 @@ class WakeMap():
                 self.candidate_layout,
                 i
             )
-            self.expected_powers_existing_raw.append(Epower_existing)
+            expected_powers_existing_raw_list.append(Epower_existing)
 
             if save_in_parts:
                 np.savez(
                     filename + "_existing_" + str(i),
-                    expected_powers_existing_raw=np.array(self.expected_powers_existing_raw),
+                    expected_powers_existing_raw=np.array(expected_powers_existing_raw_list),
                 )
+        self.expected_powers_existing_raw = np.array(expected_powers_existing_raw_list)
 
         if self.verbose:
             print("Computation of existing farm impacts completed in",
@@ -256,7 +257,7 @@ class WakeMap():
         if self.verbose:
             print("Computing impact on existing via parallel computation.")
         if use_pathos:
-            self.expected_powers_existing_raw = pathos_pool.map(
+            expected_powers_existing_raw_list = pathos_pool.map(
                 lambda x: _compute_expected_powers_existing_single_external_only(*x),
                 parallel_inputs
             )
@@ -264,10 +265,11 @@ class WakeMap():
             pathos_pool.join()
         else:
             with mp.Pool(max_workers) as p:
-                self.expected_powers_existing_raw = p.starmap(
+                expected_powers_existing_raw_list = p.starmap(
                     _compute_expected_powers_existing_single_external_only,
                     parallel_inputs
                 )
+        self.expected_powers_existing_raw = np.array(expected_powers_existing_raw_list)
         if self.verbose:
             print("Computation of existing farm impacts completed in",
                   "{:.1f} s.".format(perf_counter() - t_start))
@@ -315,13 +317,19 @@ class WakeMap():
             axis=0
         )
 
-    def process_existing_expected_powers(self):
+    def process_existing_expected_powers(self, subset: list | None = None):
         """
         Average over all existing turbines for each candidate.
+
+        Args:
+            subset: List of indices to use for the existing turbines to evaluate
         """
         self.certify_solved()
 
-        return np.mean(self.expected_powers_existing_raw, axis=1)
+        if subset is None:
+            subset = list(range(self.fmodel_existing.n_turbines))
+
+        return np.mean(self.expected_powers_existing_raw[:, subset], axis=1)
 
 
     def process_candidate_expected_powers(self):
@@ -333,25 +341,24 @@ class WakeMap():
 
         return np.mean(self.expected_powers_candidates_raw, axis=1)
 
-    def process_existing_expected_powers_subset(self, subset: list):
-        """
-        Average over all turbines in subset for each candidate.
-        """
-        self.certify_solved()
-
-        return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
-
-    def process_existing_aep_loss(self, hours_per_year: float = 8760):
+    def process_existing_aep_loss(self, subset: list | None = None, hours_per_year: float = 8760):
         """
         Compute the AEP loss for each candidate. Reports in GWh.
+
+        Args:
+            subset: List of indices to use for the existing turbines to evaluate
+            hours_per_year: Number of hours in a year (default: 8760)
         """
         self.certify_solved()
+
+        if subset is None:
+            subset = list(range(self.fmodel_existing.n_turbines))
 
         # Run a no wake calculation for the existing turbines
         self.fmodel_existing.run_no_wake()
         aep_losses_each = (
-            self.fmodel_existing.get_expected_turbine_powers().reshape(1,-1)
-            - np.array(self.expected_powers_existing_raw)
+            self.fmodel_existing.get_expected_turbine_powers()[subset].reshape(1,-1)
+            - np.array(self.expected_powers_existing_raw)[:, subset]
         ) * hours_per_year / 1e9 # Report value in GWh
 
         existing_losses = aep_losses_each.sum(axis=1)
@@ -396,23 +403,6 @@ class WakeMap():
 
         return candidate_group_losses
 
-    def process_existing_aep_loss_subset(self, subset: list, hours_per_year: float = 8760):
-        """
-        Compute the AEP loss for each candidate. Reports in GWh.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the existing turbines
-        self.fmodel_existing.run_no_wake()
-        aep_losses_each = (
-            self.fmodel_existing.get_expected_turbine_powers()[subset].reshape(1,-1)
-            - np.array(self.expected_powers_existing_raw)[:, subset]
-        ) * hours_per_year / 1e9
-
-        group_losses = aep_losses_each.sum(axis=1)
-
-        return group_losses
-
     def save_raw_expected_powers(self, filename: str):
         """
         Save the raw expected powers to a file.
@@ -430,8 +420,8 @@ class WakeMap():
         Load the raw expected powers from a file.
         """
         data = np.load(filename)
-        self.expected_powers_existing_raw = data["expected_powers_existing_raw"]
-        self.expected_powers_candidates_raw = data["expected_powers_candidates_raw"]
+        self.expected_powers_existing_raw = np.array(data["expected_powers_existing_raw"])
+        self.expected_powers_candidates_raw = np.array(data["expected_powers_candidates_raw"])
         self._solved = True
         if self.verbose:
             print("Data loaded.")
