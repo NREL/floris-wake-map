@@ -60,6 +60,7 @@ class WakeMap():
 
         self.fmodel_existing = fmodel
         self.fmodel_existing.set(wind_data=wind_rose)
+        self._reference_wind_height = self.fmodel_existing.reference_wind_height
 
         if silence_floris_warnings:
             logger = logging.getLogger(name="floris")
@@ -163,7 +164,8 @@ class WakeMap():
         self.fmodel_all_candidates.set(
             layout_x=self.all_candidates_x,
             layout_y=self.all_candidates_y,
-            turbine_type=[self.candidate_turbine]
+            turbine_type=[self.candidate_turbine],
+            reference_wind_height=self._reference_wind_height,
         )
 
         self.n_candidates = self.all_candidates_x.shape[0]
@@ -445,7 +447,8 @@ class WakeMap():
         self.fmodel_all_candidates.set(
             layout_x=all_candidates_x2,
             layout_y=all_candidates_y2,
-            turbine_type=[self.candidate_turbine]
+            turbine_type=[self.candidate_turbine],
+            reference_wind_height=self._reference_wind_height,
         )
 
         self.fmodel_all_candidates.run_no_wake()
@@ -528,6 +531,7 @@ class WakeMap():
                 turbine_type=(
                     np.array(self.fmodel_existing.core.farm.turbine_definitions)[subset]
                 ).tolist(),
+                reference_wind_height=self._reference_wind_height,
             )
 
         layout_viz.plot_turbine_points(fmodel_plot, ax=ax, plotting_dict=plotting_dict)
