@@ -8,7 +8,7 @@ from floris import FlorisModel, WindRose
 from floriswakemap import WakeMap
 from floriswakemap.wake_map import (
     _compute_expected_powers_existing_single_external_only,
-    sample_locations,
+    _sample_locations,
 )
 
 # Set up test data
@@ -28,8 +28,8 @@ wm_test = WakeMap(
     fmodel_test,
     wind_rose_test,
     min_dist=500,
-    candidate_cluster_diameter=2000,
     boundaries=[(-1500, -1500), (1500, -1500), (1500, 1500), (-1500, 1500)],
+    candidate_cluster_diameter=2000,
     verbose=True,
     parallel_max_workers=2
 )
@@ -93,7 +93,7 @@ def test_create_candidate_clusters():
     wm_test_2 = copy.deepcopy(wm_test)
 
     # Check that a smaller diameter results in a smaller cluster
-    wm_test_2.create_candidate_clusters(1000, None)
+    wm_test_2.create_candidate_clusters(None, 1000)
     assert wm_test_2.candidate_layout.shape[1] == 2
     assert wm_test_2.candidate_layout.shape[0] < wm_test.candidate_layout.shape[0]
 
@@ -102,7 +102,7 @@ def test_create_candidate_clusters():
     n = wm_test.candidate_layout.shape[0]
     layout_x = np.linspace(0, n*500, n)
     layout_y = np.zeros_like(layout_x)
-    wm_test_2.create_candidate_clusters(0, np.column_stack((layout_x, layout_y)))
+    wm_test_2.create_candidate_clusters(np.column_stack((layout_x, layout_y)), 0)
     assert np.allclose(wm_test_2.candidate_layout.mean(axis=0), 0)
     assert np.allclose(wm_test_2.candidate_layout[:,0], layout_x - layout_x.mean())
     assert np.allclose(wm_test_2.candidate_layout[:,1], layout_y - layout_y.mean())
@@ -310,7 +310,7 @@ def test_compute_expected_powers_existing_single_external_only():
 
 def test_sample_locations():
     # Run sample_locations and extract x, y, z points
-    x, y, z = sample_locations(wm_test.fmodel_existing)
+    x, y, z = _sample_locations(wm_test.fmodel_existing)
 
     # Check they agree with fmodel_existing
     hub_heights = [t["hub_height"] for t in wm_test.fmodel_existing.core.farm.turbine_definitions]
