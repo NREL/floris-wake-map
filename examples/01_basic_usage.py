@@ -63,7 +63,7 @@ if __name__ == "__main__":
         fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
     # Run the main WakeMap computation process
-    # (in serial, see also compute_raw_expected_powers_parallel)   
+    # (in serial, see also compute_raw_expected_powers_parallel)
     wake_map.compute_raw_expected_powers_serial()
 
     # Compute the expected powers of the existing and candidate groups
