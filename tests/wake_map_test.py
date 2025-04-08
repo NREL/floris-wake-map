@@ -259,7 +259,7 @@ def test_process_candidate_aep_loss():
 
 def test_plotting_integration():
     # Won't be checking the outputs of these; just checking that they run without error.
-    value_options = ["power", "aep_loss"]
+    value_options = ["expected_power", "aep_loss"]
 
     # Layout plots
     ax = wm_test.plot_existing_farm()
@@ -279,6 +279,7 @@ def test_plotting_integration():
     for v in value_options:
         ax = wm_test.plot_existing_value(v)
         ax = wm_test.plot_candidate_value(v)
+        ax = wm_test.plot_existing_value(v, subset=[2,3])
 
 def test_save_and_load():
     wm_test.save_raw_expected_powers("test_save.npz")
