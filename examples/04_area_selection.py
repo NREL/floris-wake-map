@@ -39,7 +39,6 @@ if __name__ == "__main__":
         candidate_cluster_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
         exclusion_zones=[exclusion_zone],
-        external_losses_only=True,
         verbose=True
     )
 

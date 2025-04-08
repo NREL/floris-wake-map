@@ -26,7 +26,6 @@ class WakeMap():
         candidate_cluster_layout: np.typing.NDArray | None = None,
         exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
-        external_losses_only: bool = True,
         verbose: bool = True,
         silence_floris_warnings: bool = False,
     ):
@@ -46,9 +45,8 @@ class WakeMap():
                 location of a candidate. If None, will use a circle of diameter
                 candidate_cluster_diameter to define the layout.
             parallel_max_workers: Maximum number of workers for parallel computation
-            external_losses_only: Flag to compute only the external losses for existing turbines.
-                This speeds up computation.
             verbose: Verbosity flag
+            silence_floris_warnings: Flag to silence FLORIS warnings
         """
         self.verbose = verbose
         self.parallel_max_workers = parallel_max_workers
@@ -61,9 +59,6 @@ class WakeMap():
             logger = logging.getLogger(name="floris")
             console_handler = logging.StreamHandler()
             logger.removeHandler(console_handler)
-            #floris_dict = self.fmodel_existing.core.as_dict()
-            #floris_dict["logging"]["console"]["enable"] = False
-            #self.fmodel_existing = FlorisModel.from_dict(floris_dict)
 
         self._nautical_mile = 1852 # m
 
@@ -92,12 +87,6 @@ class WakeMap():
 
         # Create candidate cluster layout
         self.create_candidate_clusters(candidate_cluster_diameter, candidate_cluster_layout)
-
-        self._compute_existing_single_function = (
-            _compute_expected_powers_existing_single_external_only if external_losses_only
-            else _compute_expected_powers_existing_single
-        )
-        self._external_losses_only = external_losses_only
 
         self._solved = False
 
@@ -213,7 +202,7 @@ class WakeMap():
             if self.verbose and i % n_print == 0:
                 print("Computing impact on existing:", i, "of", self.n_candidates,
                       "({:.1f} s)".format(perf_counter() - t_start))
-            Epower_existing = self._compute_existing_single_function(
+            Epower_existing = _compute_expected_powers_existing_single_external_only(
                 self.fmodel_existing,
                 self.fmodel_all_candidates,
                 self.candidate_layout,
@@ -268,7 +257,7 @@ class WakeMap():
             print("Computing impact on existing via parallel computation.")
         if use_pathos:
             self.expected_powers_existing_raw = pathos_pool.map(
-                lambda x: self._compute_existing_single_function(*x),
+                lambda x: _compute_expected_powers_existing_single_external_only(*x),
                 parallel_inputs
             )
             pathos_pool.close()
@@ -276,7 +265,7 @@ class WakeMap():
         else:
             with mp.Pool(max_workers) as p:
                 self.expected_powers_existing_raw = p.starmap(
-                    self._compute_existing_single_function,
+                    _compute_expected_powers_existing_single_external_only,
                     parallel_inputs
                 )
         if self.verbose:
@@ -359,10 +348,7 @@ class WakeMap():
         self.certify_solved()
 
         # Run a no wake calculation for the existing turbines
-        if self._external_losses_only:
-            self.fmodel_existing.run_no_wake()
-        else:
-            self.fmodel_existing.run()
+        self.fmodel_existing.run_no_wake()
         aep_losses_each = (
             self.fmodel_existing.get_expected_turbine_powers().reshape(1,-1)
             - np.array(self.expected_powers_existing_raw)
@@ -675,28 +661,6 @@ class WakeMap():
 
 
 #### HELPER FUNCTIONS
-def _compute_expected_powers_existing_single(
-    fmodel_existing,
-    fmodel_candidates_all,
-    candidate_layout,
-    candidate_idx
-):
-    """
-    Compute the expected power for a single candidate group.
-
-    Planning to remove this function.
-    """
-    fmodel_candidate = fmodel_candidates_all.copy()
-    fmodel_candidate.set(
-        layout_x=fmodel_candidates_all.layout_x[candidate_idx] + candidate_layout[:, 0],
-        layout_y=fmodel_candidates_all.layout_y[candidate_idx] + candidate_layout[:, 1],
-    )
-    fmodel_both = FlorisModel.merge_floris_models([fmodel_existing, fmodel_candidate])
-    fmodel_both.set(wind_data=fmodel_existing.wind_data)
-    fmodel_both.run()
-
-    return fmodel_both.get_expected_turbine_powers()[:fmodel_existing.layout_x.shape[0]]
-
 def _compute_expected_powers_existing_single_external_only(
     fmodel_existing,
     fmodel_all_candidates,
