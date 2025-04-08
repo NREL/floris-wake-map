@@ -8,7 +8,7 @@ from floris import FlorisModel, WindRose
 from floriswakemap import WakeMap
 from floriswakemap.wake_map import (
     _compute_expected_powers_existing_single_external_only,
-    sample_locations,
+    _sample_locations,
 )
 
 # Set up test data
@@ -28,8 +28,8 @@ wm_test = WakeMap(
     fmodel_test,
     wind_rose_test,
     min_dist=500,
-    candidate_cluster_diameter=2000,
     boundaries=[(-1500, -1500), (1500, -1500), (1500, 1500), (-1500, 1500)],
+    candidate_cluster_diameter=2000,
     verbose=True,
     parallel_max_workers=2
 )
@@ -93,7 +93,7 @@ def test_create_candidate_clusters():
     wm_test_2 = copy.deepcopy(wm_test)
 
     # Check that a smaller diameter results in a smaller cluster
-    wm_test_2.create_candidate_clusters(1000, None)
+    wm_test_2.create_candidate_clusters(None, 1000)
     assert wm_test_2.candidate_layout.shape[1] == 2
     assert wm_test_2.candidate_layout.shape[0] < wm_test.candidate_layout.shape[0]
 
@@ -102,7 +102,7 @@ def test_create_candidate_clusters():
     n = wm_test.candidate_layout.shape[0]
     layout_x = np.linspace(0, n*500, n)
     layout_y = np.zeros_like(layout_x)
-    wm_test_2.create_candidate_clusters(0, np.column_stack((layout_x, layout_y)))
+    wm_test_2.create_candidate_clusters(np.column_stack((layout_x, layout_y)), 0)
     assert np.allclose(wm_test_2.candidate_layout.mean(axis=0), 0)
     assert np.allclose(wm_test_2.candidate_layout[:,0], layout_x - layout_x.mean())
     assert np.allclose(wm_test_2.candidate_layout[:,1], layout_y - layout_y.mean())
@@ -164,21 +164,21 @@ def test_process_existing_expected_powers():
     assert out.shape[0] == wm_test.n_candidates
     assert np.allclose(out, np.mean(wm_test.expected_powers_existing_raw, axis=1))
 
-def test_process_candidate_expected_powers():
-    out = wm_test.process_candidate_expected_powers()
-
-    assert out.shape[0] == wm_test.n_candidates
-    assert np.allclose(out, np.mean(wm_test.expected_powers_candidates_raw, axis=1))
-
-def test_process_existing_expected_powers_subset():
+    # Test on a subset
     subset = [2,3]
-    out = wm_test.process_existing_expected_powers_subset(subset)
+    out = wm_test.process_existing_expected_powers(subset)
 
     assert out.shape[0] == wm_test.n_candidates
     assert np.allclose(
         out,
         np.mean(np.array(wm_test.expected_powers_existing_raw)[:,subset], axis=1)
     )
+
+def test_process_candidate_expected_powers():
+    out = wm_test.process_candidate_expected_powers()
+
+    assert out.shape[0] == wm_test.n_candidates
+    assert np.allclose(out, np.mean(wm_test.expected_powers_candidates_raw, axis=1))
 
 def test_process_existing_aep_loss():
     hours_per_year_default = 8760
@@ -200,6 +200,31 @@ def test_process_existing_aep_loss():
     # Test with a different number of hours
     hours_per_year = 1000
     out = wm_test.process_existing_aep_loss(hours_per_year=hours_per_year)
+    assert out.shape[0] == wm_test.n_candidates
+    assert np.allclose(
+        out,
+        expected_power_loss * hours_per_year
+    )
+
+    # Test a subset
+    subset = [2,3]
+    out = wm_test.process_existing_aep_loss(subset)
+    assert out.shape[0] == wm_test.n_candidates
+
+    wm_test.fmodel_existing.run_no_wake()
+    unwaked_powers = wm_test.fmodel_existing.get_expected_turbine_powers()[subset]
+    expected_power_loss = np.sum(
+        unwaked_powers.reshape(1, len(subset))
+        - np.array(wm_test.expected_powers_existing_raw)[:,subset],
+        axis = 1
+    ) / 1e9
+    assert np.allclose(
+        out,
+        expected_power_loss * hours_per_year_default
+    )
+
+    hours_per_year = 1000
+    out = wm_test.process_existing_aep_loss(subset, hours_per_year=hours_per_year)
     assert out.shape[0] == wm_test.n_candidates
     assert np.allclose(
         out,
@@ -232,43 +257,9 @@ def test_process_candidate_aep_loss():
         expected_power_loss * hours_per_year
     )
 
-def test_process_existing_aep_loss_subset():
-    subset = [2,3]
-    hours_per_year_default = 8760
-    out = wm_test.process_existing_aep_loss_subset(subset)
-    assert out.shape[0] == wm_test.n_candidates
-
-    wm_test.fmodel_existing.run_no_wake()
-    unwaked_powers = wm_test.fmodel_existing.get_expected_turbine_powers()[subset]
-    expected_power_loss = np.sum(
-        unwaked_powers.reshape(1, len(subset))
-        - np.array(wm_test.expected_powers_existing_raw)[:,subset],
-        axis = 1
-    ) / 1e9
-    assert np.allclose(
-        out,
-        expected_power_loss * hours_per_year_default
-    )
-
-    hours_per_year = 1000
-    out = wm_test.process_existing_aep_loss_subset(subset, hours_per_year=hours_per_year)
-    assert out.shape[0] == wm_test.n_candidates
-    assert np.allclose(
-        out,
-        expected_power_loss * hours_per_year
-    )
-
-# Will not test the following, as they will be retired in an upcoming pull request:
-# - process_existing_expected_capacity_factors
-# - process_candidate_expected_capacity_factors
-# - process_existing_expected_capacity_factors_subset
-# - process_existing_expected_normalized_powers
-# - process_candidate_expected_normalized_powers
-# - process_existing_expected_normalized_powers_subset
-
 def test_plotting_integration():
     # Won't be checking the outputs of these; just checking that they run without error.
-    value_options = ["power", "aep_loss"]
+    value_options = ["expected_power", "aep_loss"]
 
     # Layout plots
     ax = wm_test.plot_existing_farm()
@@ -288,6 +279,7 @@ def test_plotting_integration():
     for v in value_options:
         ax = wm_test.plot_existing_value(v)
         ax = wm_test.plot_candidate_value(v)
+        ax = wm_test.plot_existing_value(v, subset=[2,3])
 
 def test_save_and_load():
     wm_test.save_raw_expected_powers("test_save.npz")
@@ -318,7 +310,7 @@ def test_compute_expected_powers_existing_single_external_only():
 
 def test_sample_locations():
     # Run sample_locations and extract x, y, z points
-    x, y, z = sample_locations(wm_test.fmodel_existing)
+    x, y, z = _sample_locations(wm_test.fmodel_existing)
 
     # Check they agree with fmodel_existing
     hub_heights = [t["hub_height"] for t in wm_test.fmodel_existing.core.farm.turbine_definitions]

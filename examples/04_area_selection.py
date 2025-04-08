@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     save_figs = False
 
-    value = "capacity_factor"
+    value = "aep_loss"
 
     fmodel = FlorisModel("inputs/gch.yaml")
     fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
@@ -36,10 +36,9 @@ if __name__ == "__main__":
         fmodel,
         wind_rose_test,
         min_dist=nm,
-        candidate_cluster_diameter=6000,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
+        candidate_cluster_diameter=6000,
         exclusion_zones=[exclusion_zone],
-        external_losses_only=True,
         verbose=True
     )
 
@@ -53,14 +52,14 @@ if __name__ == "__main__":
     area_selector.add_constraint({
         "turbines": "existing",
         "value": value,
-        "threshold": 0.561,
+        "threshold": 150,
         "name": "existing_CF"
     })
     area_selector.report_constraints()
     area_selector.add_constraint({
         "turbines": "candidates",
         "value": value,
-        "threshold": 0.530,
+        "threshold": 150,
         "name": "candidates_CF"
     })
     area_selector.report_constraints()

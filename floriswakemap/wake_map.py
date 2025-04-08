@@ -12,7 +12,7 @@ from shapely.geometry import Point, Polygon
 
 class WakeMap():
     """
-    Class to calculate and plot wake maps.
+    Class to calculate and plot wake maps for existing and candidate farms.
     """
 
     def __init__(
@@ -20,13 +20,12 @@ class WakeMap():
         fmodel: FlorisModel,
         wind_rose: WindRose,
         min_dist: float | None = None,
-        candidate_cluster_diameter: float | None = None,
         boundaries: list[(float, float)] | None = None,
-        candidate_turbine = "iea_15MW",
         candidate_cluster_layout: np.typing.NDArray | None = None,
+        candidate_cluster_diameter: float | None = None,
+        candidate_turbine = "iea_15MW",
         exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
-        external_losses_only: bool = True,
         verbose: bool = True,
         silence_floris_warnings: bool = False,
     ):
@@ -35,20 +34,25 @@ class WakeMap():
 
         Args:
             fmodel: FlorisModel object
-            wind_rose: WindRose object (is this needed? Could come on fmodel?)
+            wind_rose: WindRose object
             min_dist: Minimum distance between turbines in meters
-            candidate_cluster_diameter: Diameter of the group of turbines in meters
-            bounding_box: Dictionary of bounding box limits. Should contain keys
-                "x_min", "x_max", "y_min", "y_max"
-            candidate_turbine: Turbine type to use for candidate turbines
+            boundaries: List of (x,y) tuples defining the boundaries of the area to investigate
+                for candidate groups. If None, will default to a rectangle with 5 nautical mile
+                clearance from the existing farm.
             candidate_cluster_layout: Layout of candidate turbines for group calculation. Should
                 by a 2D numpy array with shape (n_group, 2), where each row contains the (x,y)
                 location of a candidate. If None, will use a circle of diameter
                 candidate_cluster_diameter to define the layout.
+            candidate_cluster_diameter: Diameter of the group of turbines in meters
+            candidate_turbine: Turbine type to use for candidate turbines
+            exclusion_zones: List of exclusion zones, where each zone is defined by a list of
+                (x,y) tuples. Exclusion zones are polygons that are not allowed to contain any
+                candidate turbines. If None, will default to an empty list.
             parallel_max_workers: Maximum number of workers for parallel computation
-            external_losses_only: Flag to compute only the external losses for existing turbines.
-                This speeds up computation.
             verbose: Verbosity flag
+            silence_floris_warnings: Flag to silence FLORIS warnings
+        Returns:
+            Instantiated WakeMap object
         """
         self.verbose = verbose
         self.parallel_max_workers = parallel_max_workers
@@ -61,9 +65,6 @@ class WakeMap():
             logger = logging.getLogger(name="floris")
             console_handler = logging.StreamHandler()
             logger.removeHandler(console_handler)
-            #floris_dict = self.fmodel_existing.core.as_dict()
-            #floris_dict["logging"]["console"]["enable"] = False
-            #self.fmodel_existing = FlorisModel.from_dict(floris_dict)
 
         self._nautical_mile = 1852 # m
 
@@ -91,13 +92,7 @@ class WakeMap():
         self.create_candidate_locations()
 
         # Create candidate cluster layout
-        self.create_candidate_clusters(candidate_cluster_diameter, candidate_cluster_layout)
-
-        self._compute_existing_single_function = (
-            _compute_expected_powers_existing_single_external_only if external_losses_only
-            else _compute_expected_powers_existing_single
-        )
-        self._external_losses_only = external_losses_only
+        self.create_candidate_clusters(candidate_cluster_layout, candidate_cluster_diameter)
 
         self._solved = False
 
@@ -118,6 +113,11 @@ class WakeMap():
     def create_candidate_locations(self):
         """
         Create a floris model with all candidate locations.
+
+        Args:
+            None
+        Returns:
+            None
         """
         x, y = self._boundary_polygon.exterior.coords.xy
 
@@ -170,9 +170,23 @@ class WakeMap():
         if self.verbose:
             print(self.n_candidates, "candidate turbine positions created.")
 
-    def create_candidate_clusters(self, candidate_cluster_diameter, candidate_cluster_layout):
+    def create_candidate_clusters(
+        self,
+        candidate_cluster_layout: np.typing.NDArray | None = None,
+        candidate_cluster_diameter: float | None = None,
+    ):
         """
         Create turbine candidate groups.
+
+        Args:
+            candidate_cluster_layout: Layout of candidate turbines for group calculation. Should
+                by a 2D numpy array with shape (n_group, 2), where each row contains the (x,y)
+                location of a candidate. If None, will use a circle of diameter
+                candidate_cluster_diameter to define the layout.
+            candidate_cluster_diameter: Diameter of the group of turbines in meters. If None and
+                candidate_cluster_layout is None, will default to 3 nautical miles.
+        Returns:
+            None
         """
         # Check only candidate_cluster_diameter or candidate_group are provided
         if candidate_cluster_diameter is None:
@@ -198,12 +212,23 @@ class WakeMap():
                 self.candidate_layout.shape[0])
             )
 
-    def compute_raw_expected_powers_serial(self, save_in_parts=False, filename=None):
+    def compute_raw_expected_powers_serial(
+        self,
+        save_in_parts: bool = False,
+        filename: str | None = None
+    ):
         """
         Compute the turbine expected power for each candidate group; as well as for the existing
         farm.
+
+        Args:
+            save_in_parts: Flag to save the expected powers in parts
+            filename: Filename to save to (if None and save_in_parts is True, defaults to
+                "expected_powers")
+        Returns:
+            None
         """
-        self.expected_powers_existing_raw = []
+        expected_powers_existing_raw_list = []
         t_start = perf_counter()
         for i in range(self.n_candidates):
             if len(self.fmodel_existing.layout_x) > 1000:
@@ -213,19 +238,22 @@ class WakeMap():
             if self.verbose and i % n_print == 0:
                 print("Computing impact on existing:", i, "of", self.n_candidates,
                       "({:.1f} s)".format(perf_counter() - t_start))
-            Epower_existing = self._compute_existing_single_function(
+            Epower_existing = _compute_expected_powers_existing_single_external_only(
                 self.fmodel_existing,
                 self.fmodel_all_candidates,
                 self.candidate_layout,
                 i
             )
-            self.expected_powers_existing_raw.append(Epower_existing)
+            expected_powers_existing_raw_list.append(Epower_existing)
 
             if save_in_parts:
+                if filename is None:
+                    filename = "expected_powers"
                 np.savez(
                     filename + "_existing_" + str(i),
-                    expected_powers_existing_raw=np.array(self.expected_powers_existing_raw),
+                    expected_powers_existing_raw=np.array(expected_powers_existing_raw_list),
                 )
+        self.expected_powers_existing_raw = np.array(expected_powers_existing_raw_list)
 
         if self.verbose:
             print("Computation of existing farm impacts completed in",
@@ -239,6 +267,11 @@ class WakeMap():
         """
         Compute the turbine expected power for each candidate group; as well as for the existing
         farm using pathos.
+
+        Args:
+            None
+        Returns:
+            None
         """
         if self.parallel_max_workers == -1:
             max_workers = pathos.helpers.cpu_count()
@@ -267,18 +300,19 @@ class WakeMap():
         if self.verbose:
             print("Computing impact on existing via parallel computation.")
         if use_pathos:
-            self.expected_powers_existing_raw = pathos_pool.map(
-                lambda x: self._compute_existing_single_function(*x),
+            expected_powers_existing_raw_list = pathos_pool.map(
+                lambda x: _compute_expected_powers_existing_single_external_only(*x),
                 parallel_inputs
             )
             pathos_pool.close()
             pathos_pool.join()
         else:
             with mp.Pool(max_workers) as p:
-                self.expected_powers_existing_raw = p.starmap(
-                    self._compute_existing_single_function,
+                expected_powers_existing_raw_list = p.starmap(
+                    _compute_expected_powers_existing_single_external_only,
                     parallel_inputs
                 )
+        self.expected_powers_existing_raw = np.array(expected_powers_existing_raw_list)
         if self.verbose:
             print("Computation of existing farm impacts completed in",
                   "{:.1f} s.".format(perf_counter() - t_start))
@@ -292,6 +326,11 @@ class WakeMap():
     def compute_expected_powers_candidates(self):
         """
         Compute expected power for candidates, based on FlorisModel.sample_flow_at_points().
+
+        Args:
+            None
+        Returns:
+            None
         """
         # Expand to all possible candidate locations.
         # TODO: Consider using ParFlorisModel (Floris v4.3)
@@ -326,46 +365,60 @@ class WakeMap():
             axis=0
         )
 
-    def process_existing_expected_powers(self):
+    def process_existing_expected_powers(self, subset: list | None = None):
         """
-        Average over all existing turbines for each candidate.
+        Compute the expected powers of existing turbines for each candidate group.
+
+        Args:
+            subset: List of indices of the existing turbines to evaluate (defaults to all existing
+                turbines)
+        Returns:
+            expected_powers_existing: Expected power for the average turbine in the existing farm
+                for each candidate group (shape n_candidates)
         """
         self.certify_solved()
 
-        return np.mean(self.expected_powers_existing_raw, axis=1)
+        if subset is None:
+            subset = list(range(self.fmodel_existing.n_turbines))
+
+        return np.mean(self.expected_powers_existing_raw[:, subset], axis=1)
 
 
     def process_candidate_expected_powers(self):
         """
-        Is this doing anything? If so, what? Should it be? Maybe still useful?
-        For now, just return the raw singular powers
+        Compute the expected powers for each candidate group.
+
+        Args:
+            None
+        Returns:
+            expected_powers_candidates: Expected powers for each candidate group
+                (shape n_candidates)
         """
         self.certify_solved()
 
         return np.mean(self.expected_powers_candidates_raw, axis=1)
 
-    def process_existing_expected_powers_subset(self, subset: list):
-        """
-        Average over all turbines in subset for each candidate.
-        """
-        self.certify_solved()
-
-        return np.mean(np.array(self.expected_powers_existing_raw)[:, subset], axis=1)
-
-    def process_existing_aep_loss(self, hours_per_year: float = 8760):
+    def process_existing_aep_loss(self, subset: list | None = None, hours_per_year: float = 8760):
         """
         Compute the AEP loss for each candidate. Reports in GWh.
+
+        Args:
+            subset: List of indices to use for the existing turbines to evaluate
+            hours_per_year: Number of hours in a year for AEP calculation
+        Returns:
+            existing_losses: AEP loss for the existing (subset) farm for each candidate group
+                (shape n_candidates)
         """
         self.certify_solved()
 
+        if subset is None:
+            subset = list(range(self.fmodel_existing.n_turbines))
+
         # Run a no wake calculation for the existing turbines
-        if self._external_losses_only:
-            self.fmodel_existing.run_no_wake()
-        else:
-            self.fmodel_existing.run()
+        self.fmodel_existing.run_no_wake()
         aep_losses_each = (
-            self.fmodel_existing.get_expected_turbine_powers().reshape(1,-1)
-            - np.array(self.expected_powers_existing_raw)
+            self.fmodel_existing.get_expected_turbine_powers()[subset].reshape(1,-1)
+            - np.array(self.expected_powers_existing_raw)[:, subset]
         ) * hours_per_year / 1e9 # Report value in GWh
 
         existing_losses = aep_losses_each.sum(axis=1)
@@ -374,7 +427,12 @@ class WakeMap():
 
     def process_candidate_aep_loss(self, hours_per_year: float = 8760):
         """
-        Compute the AEP loss for each candidate. Reports in GWh.
+        Compute the Annual Energy Production (AEP) loss for each candidate. Reports in GWh.
+
+        Args:
+            hours_per_year: Number of hours in a year for AEP calculation.
+        Returns:
+            candidate_group_losses: AEP loss for each candidate group (shape n_candidates)
         """
         self.certify_solved()
 
@@ -410,124 +468,13 @@ class WakeMap():
 
         return candidate_group_losses
 
-    def process_existing_aep_loss_subset(self, subset: list, hours_per_year: float = 8760):
-        """
-        Compute the AEP loss for each candidate. Reports in GWh.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the existing turbines
-        self.fmodel_existing.run_no_wake()
-        aep_losses_each = (
-            self.fmodel_existing.get_expected_turbine_powers()[subset].reshape(1,-1)
-            - np.array(self.expected_powers_existing_raw)[:, subset]
-        ) * hours_per_year / 1e9
-
-        group_losses = aep_losses_each.sum(axis=1)
-
-        return group_losses
-
-    def process_existing_expected_capacity_factors(self):
-        """
-        Average capacity factor over turbines.
-        """
-        self.certify_solved()
-
-        rated_powers = np.array(
-            [np.array(turbine.power_thrust_table["power"]).max()
-             for turbine in self.fmodel_existing.core.farm.turbine_map]
-        ).reshape(1, -1)*1e3
-        # TODO: should this actually be computing the farm-wide CF?
-        # expected_farm_power / rated_farm_power = sum(expected_powers) / sum(rated_powers)?
-
-        group_cfs = np.mean(np.array(self.expected_powers_existing_raw)/rated_powers, axis=1)
-
-        return group_cfs
-
-    def process_candidate_expected_capacity_factors(self):
-        """
-        """
-        self.certify_solved()
-
-        # Only type of candidate turbine
-        rated_power = np.array(self.fmodel_all_candidates.core.farm.turbine_map[0]\
-            .power_thrust_table["power"]).max()*1e3
-
-        return np.mean(self.expected_powers_candidates_raw, axis=1)/rated_power
-
-    def process_existing_expected_capacity_factors_subset(self, subset: list):
-        """
-        Average over all turbines in subset for each candidate.
-        """
-        self.certify_solved()
-
-        rated_powers = np.array(
-            [np.array(turbine.power_thrust_table["power"]).max()
-             for turbine in np.array(self.fmodel_all_candidates.core.farm.turbine_map)[subset]]
-        ).reshape(1, -1)*1e3
-
-        group_cfs = np.mean(
-            np.array(self.expected_powers_existing_raw)[:, subset]/rated_powers,
-            axis=1
-        )
-
-        return group_cfs
-
-    def process_existing_expected_normalized_powers(self):
-        """
-        Average normalized power including (external or combined) wake loss.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the existing turbines
-        self.fmodel_existing.run_no_wake()
-        no_wake_expected_powers = self.fmodel_existing.get_expected_turbine_powers()
-        normalized_expected_powers = (
-            np.array(self.expected_powers_existing_raw)
-            / no_wake_expected_powers.reshape(1,-1)
-        )
-
-        group_neps = np.mean(normalized_expected_powers, axis=1)
-
-        return group_neps
-
-    def process_candidate_expected_normalized_powers(self):
-        """
-        Average normalized power including (external or combined) wake loss.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the candidate
-        self.fmodel_all_candidates.run_no_wake()
-        no_wake_expected_powers = self.fmodel_all_candidates.get_expected_turbine_powers()
-        normalized_expected_powers = (
-            np.array(self.expected_powers_candidates_raw)
-            / no_wake_expected_powers
-        )
-
-        return normalized_expected_powers
-
-    def process_existing_expected_normalized_powers_subset(self, subset: list):
-        """
-        Average normalized power including (external or combined) wake loss.
-        """
-        self.certify_solved()
-
-        # Run a no wake calculation for the existing turbines
-        self.fmodel_existing.run_no_wake()
-        no_wake_expected_powers = self.fmodel_existing.get_expected_turbine_powers()
-        normalized_expected_powers = (
-            np.array(self.expected_powers_existing_raw)[:, subset]
-            / no_wake_expected_powers[subset].reshape(1,-1)
-        )
-
-        group_neps = np.mean(normalized_expected_powers, axis=1)
-
-        return group_neps
-
     def save_raw_expected_powers(self, filename: str):
         """
-        Save the raw expected powers to a file.
+        Save the raw expected powers to a .npz file.
+        Args:
+            filename: Filename to save to
+        Returns:
+            None
         """
         np.savez(
             filename,
@@ -539,11 +486,16 @@ class WakeMap():
 
     def load_raw_expected_powers(self, filename: str):
         """
-        Load the raw expected powers from a file.
+        Load the raw expected powers from a .npz file.
+
+        Args:
+            filename: Filename to load
+        Returns:
+            None
         """
         data = np.load(filename)
-        self.expected_powers_existing_raw = data["expected_powers_existing_raw"]
-        self.expected_powers_candidates_raw = data["expected_powers_candidates_raw"]
+        self.expected_powers_existing_raw = np.array(data["expected_powers_existing_raw"])
+        self.expected_powers_candidates_raw = np.array(data["expected_powers_candidates_raw"])
         self._solved = True
         if self.verbose:
             print("Data loaded.")
@@ -561,6 +513,9 @@ class WakeMap():
         Args:
             ax: Matplotlib axes object
             plotting_dict: Dictionary of plotting options
+            subset: List of indices of existing farm turbines to plot
+        Returns:
+            ax: Matplotlib axes object
         """
         if ax is None:
             _, ax = plt.subplots()
@@ -590,6 +545,8 @@ class WakeMap():
         Args:
             ax: Matplotlib axes object
             plotting_dict: Dictionary of plotting options
+        Returns:
+            ax: Matplotlib axes object
         """
         # Gray for candidate locations
         if "color" not in plotting_dict.keys():
@@ -613,25 +570,39 @@ class WakeMap():
     ):
         """
         Plot the groups that the candidate belongs to.
+
+        Args:
+            candidate_idx: Index of the candidate group to plot
+            ax: Matplotlib axes object
+            plotting_dict: Dictionary of plotting options
+        Returns:
+            ax: Matplotlib axes object
         """
+        default_plotting_dict = {
+            "marker": ".",
+            "markersize": 10,
+            "color": "red",
+            "markeredgecolor": "None"
+        }
+        plotting_dict = {**default_plotting_dict, **plotting_dict}
         if ax is None:
             _, ax = plt.subplots()
 
-        ax.scatter(
+        ax.plot(
             self.all_candidates_x[candidate_idx],
             self.all_candidates_y[candidate_idx],
-            marker=".",
-            s=1000,
-            color="red"
+            linestyle="None",
+            **plotting_dict,
+            label="Centerpoint"
         )
 
-        ax.scatter(
+        ax.plot(
             self.all_candidates_x[candidate_idx] + self.candidate_layout[:, 0],
             self.all_candidates_y[candidate_idx] + self.candidate_layout[:, 1],
-            marker=".",
-            s=100,
-            color="red",
-            alpha=0.8
+            label="Candidate layout",
+            linestyle="None",
+            alpha=0.5,
+            **plotting_dict,
         )
 
         return ax
@@ -644,6 +615,13 @@ class WakeMap():
     ):
         """
         Plot the exclusion zones.
+
+        Args:
+            ax: Matplotlib axes object
+            color: Color of the exclusion zones
+            alpha: Alpha value for the fill
+        Returns:
+            ax: Matplotlib axes object
         """
         if ax is None:
             _, ax = plt.subplots()
@@ -663,6 +641,13 @@ class WakeMap():
     ):
         """
         Plot the boundary.
+
+        Args:
+            ax: Matplotlib axes object
+            color: Color of the boundary
+            alpha: Alpha value for the fill
+        Returns:
+            ax: Matplotlib axes object
         """
         if ax is None:
             _, ax = plt.subplots()
@@ -674,7 +659,7 @@ class WakeMap():
 
     def plot_contour(
         self,
-        values,
+        values: np.typing.NDArray,
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         cmap: str | None = None,
@@ -683,6 +668,15 @@ class WakeMap():
         """
         Create a contour plot. Mostly used as a subroutine called by higher-level
         plotting methods.
+
+        Args:
+            values: Values to plot (1D array)
+            ax: Matplotlib axes object. If None, ax is created
+            normalizer: Normalizer for the color scale
+            cmap: Colormap to use
+            colorbar_label: Label for the colorbar
+        Returns:
+            ax: Matplotlib axes object
         """
         if ax is None:
             fig, ax = plt.subplots()
@@ -709,7 +703,8 @@ class WakeMap():
 
     def plot_existing_value(
         self,
-        value: str = "power",
+        value: str = "expected_power",
+        subset: list | None = None,
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         colorbar_label: str | None = None,
@@ -717,24 +712,27 @@ class WakeMap():
     ):
         """
         Plot the expected powers of the existing farm.
+
+        Args:
+            value: Type of value to plot. Options are "expected_power" or "aep_loss".
+            subset: List of indices to use for the existing turbines to evaluate
+            ax: Matplotlib axes object. If None, ax is created
+            normalizer: Normalizer for the color scale
+            colorbar_label: Label for the colorbar
+            cmap: Colormap to use
+        Returns:
+            ax: Matplotlib axes object
         """
         match value: # noqa: E999
-            case "power":
-                plot_variable = self.process_existing_expected_powers()
+            case "expected_power" | "power":
+                plot_variable = self.process_existing_expected_powers(subset=subset)
                 colorbar_label_default = "Existing turbine expected power [MW]"
-            case "capacity_factor":
-                plot_variable = self.process_existing_expected_capacity_factors()
-                colorbar_label_default = "Existing turbine capacity factor [-]"
-            case "normalized_power":
-                plot_variable = self.process_existing_expected_normalized_powers()
-                colorbar_label_default = "Existing turbine normalized power [-]"
             case "aep_loss":
-                plot_variable = self.process_existing_aep_loss()
+                plot_variable = self.process_existing_aep_loss(subset=subset)
                 colorbar_label_default = "Existing farm AEP loss [GWh]"
             case _:
                 raise ValueError(
-                    "Invalid type. Must be 'power', 'normalized_power', 'aep_loss',"
-                    " or 'capacity_factor'."
+                    "Invalid type. Must be 'power', 'expected_power', or 'aep_loss'."
                 )
         colorbar_label = colorbar_label_default if colorbar_label is None else colorbar_label
 
@@ -748,7 +746,7 @@ class WakeMap():
 
     def plot_candidate_value(
         self,
-        value: str = "power",
+        value: str = "expected_power",
         ax: plt.Axes | None = None,
         normalizer: float = 1.0,
         colorbar_label: str | None = None,
@@ -756,23 +754,26 @@ class WakeMap():
     ):
         """
         Plot the expected powers of the candidate farm.
+
+        Args:
+            value: Type of value to plot. Options are "expected_power" or "aep_loss".
+            ax: Matplotlib axes object. If None, ax is created
+            normalizer: Normalizer for the color scale
+            colorbar_label: Label for the colorbar
+            cmap: Colormap to use
+        Returns:
+            ax: Matplotlib axes object
         """
         match value:
-            case "power":
+            case "expected_power" | "power":
                 plot_variable = self.process_candidate_expected_powers()
                 colorbar_label_default = "Candidate turbine power [MW]"
-            case "capacity_factor":
-                plot_variable = self.process_candidate_expected_capacity_factors()
-                colorbar_label_default = "Candidate turbine capacity factor [-]"
-            case "normalized_power":
-                plot_variable = self.process_candidate_expected_normalized_powers()
-                colorbar_label_default = "Candidate turbine normalized power [-]"
             case "aep_loss":
                 plot_variable = self.process_candidate_aep_loss()
                 colorbar_label_default = "Candidate group AEP loss [GWh]"
             case _:
                 raise ValueError(
-                    "Invalid type. Must be 'power', 'normalized_power', or 'capacity_factor'."
+                    "Invalid type. Must be 'power', 'expected_power', or 'aep_loss'."
                 )
         colorbar_label = colorbar_label_default if colorbar_label is None else colorbar_label
 
@@ -786,36 +787,22 @@ class WakeMap():
 
 
 #### HELPER FUNCTIONS
-def _compute_expected_powers_existing_single(
-    fmodel_existing,
-    fmodel_candidates_all,
-    candidate_layout,
-    candidate_idx
-):
-    """
-    Compute the expected power for a single candidate group.
-
-    Planning to remove this function.
-    """
-    fmodel_candidate = fmodel_candidates_all.copy()
-    fmodel_candidate.set(
-        layout_x=fmodel_candidates_all.layout_x[candidate_idx] + candidate_layout[:, 0],
-        layout_y=fmodel_candidates_all.layout_y[candidate_idx] + candidate_layout[:, 1],
-    )
-    fmodel_both = FlorisModel.merge_floris_models([fmodel_existing, fmodel_candidate])
-    fmodel_both.set(wind_data=fmodel_existing.wind_data)
-    fmodel_both.run()
-
-    return fmodel_both.get_expected_turbine_powers()[:fmodel_existing.layout_x.shape[0]]
-
 def _compute_expected_powers_existing_single_external_only(
-    fmodel_existing,
-    fmodel_all_candidates,
-    candidate_layout,
-    candidate_idx
+    fmodel_existing: FlorisModel,
+    fmodel_all_candidates: FlorisModel,
+    candidate_layout: np.typing.NDArray,
+    candidate_idx: int
 ):
     """
     Compute the expected power for a single candidate group, but only considering external turbines.
+
+    Args:
+        fmodel_existing: FlorisModel object for the existing farm
+        fmodel_all_candidates: FlorisModel object for all candidate locations
+        candidate_layout: Layout of candidate turbines for group calculation (n_candidates x 2)
+        candidate_idx: Index of the candidate group to compute
+    Returns:
+        expected_powers: Expected powers for the existing turbines
     """
 
     fmodel_candidate = fmodel_all_candidates.copy()
@@ -825,7 +812,7 @@ def _compute_expected_powers_existing_single_external_only(
         wind_data=fmodel_existing.wind_data
     )
 
-    x, y, z = sample_locations(fmodel_existing)
+    x, y, z = _sample_locations(fmodel_existing)
 
     wind_speeds = fmodel_candidate.sample_flow_at_points(
         x=x.flatten(),
@@ -860,7 +847,15 @@ def _compute_expected_powers_existing_single_external_only(
     frequencies = fmodel_existing.wind_data.unpack_freq()
     return np.nansum(np.multiply(frequencies.reshape(-1, 1), existing_powers), axis=0)
 
-def sample_locations(fmodel_existing):
+def _sample_locations(fmodel_existing: FlorisModel):
+    """
+    Provide x, y, z locations of all turbines at all rotor grid points.
+
+    Args:
+        fmodel_existing: FlorisModel object
+    Returns:
+        (x, y, z): Tuple of x, y, z locations of all turbines at all rotor grid points
+    """
 
     turbine_locs = fmodel_existing.core.grid.turbine_coordinates
     radius_ratio = 0.5
