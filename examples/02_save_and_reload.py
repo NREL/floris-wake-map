@@ -13,7 +13,7 @@ wind_rose_demo = WindRose(
     ti_table=0.06
 )
 
-# Instantiate a FlorisModel to represent the existing wind farn
+# Instantiate a FlorisModel to represent the existing wind farm
 fmodel = FlorisModel("defaults")
 
 nautical_mile = 1852

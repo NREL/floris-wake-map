@@ -24,7 +24,7 @@ if __name__ == "__main__":
     if save_figs and not os.path.exists("figs"):
         os.makedirs("figs")
 
-    # Instantiate a FlorisModel to represent the existing wind farn
+    # Instantiate a FlorisModel to represent the existing wind farm
     fmodel = FlorisModel("defaults")
 
     nautical_mile = 1852
