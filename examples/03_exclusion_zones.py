@@ -7,7 +7,8 @@ from floris import FlorisModel, WindRose
 from floriswakemap import WakeMap
 
 if __name__ == "__main__":
-    wind_rose_test = WindRose(
+    # Create demonstration wind rose
+    wind_rose_demo = WindRose(
         wind_speeds=np.array([8.0, 10.0]),
         wind_directions=np.array([45.0, 90.0, 135.0, 180.0, 225.0, 270.0]),
         freq_table=np.array(
@@ -15,41 +16,48 @@ if __name__ == "__main__":
         ),
         ti_table=0.06
     )
-    wind_rose_test.plot()
 
+    # Optionally, we can save the output figures
     save_figs = False
     if save_figs and not os.path.exists("figs"):
         os.makedirs("figs")
 
+    # Set value to process and plot. Options: "aep_loss" or "expected_power"
     value = "aep_loss"
 
+    # Instantiate a FlorisModel to represent the existing wind farm
     fmodel = FlorisModel("defaults")
-    fmodel.set(turbine_type=["iea_15MW"], reference_wind_height=150.0)
-    nm = 1852
-    x_pos = np.linspace(0, 9*nm, 10)
+
+    nautical_mile = 1852
+    x_pos = np.linspace(0, 9*nautical_mile, 10)
     y_pos = x_pos
     x_pos, y_pos = np.meshgrid(x_pos, y_pos)
 
     fmodel.set(
         layout_x=x_pos.flatten(),
         layout_y=y_pos.flatten(),
+        turbine_type=["iea_15MW"],
+        reference_wind_height=150.0
     )
 
+    # For this example, we'll add some exclusion zones where candidate clusters cannot be placed.
     exclusion_zones = [
         [(15000, -7000), (20000, -2000), (15000, -2000)], # First zone
         [(-7000, 15000), (-4000, 15000), (-4000, 20000), (-7000, 20000)] # Second zone
     ]
 
+    # Establish the WakeMap object. Use a circular candidate cluster with a diameter of 6000 m.
     wake_map = WakeMap(
         fmodel,
-        wind_rose_test,
-        min_dist=nm,
+        wind_rose_demo,
+        min_dist=nautical_mile,
         boundaries=[(-10000, -10000), (25000, -10000), (25000, 25000), (-10000, 25000)],
         candidate_cluster_diameter=6000,
         exclusion_zones=exclusion_zones,
         verbose=True
     )
 
+    # Plot the domain of the WakeMap object
     ax = wake_map.plot_existing_farm()
     ax = wake_map.plot_exclusion_zones(ax=ax)
     fig = ax.get_figure()
@@ -62,12 +70,11 @@ if __name__ == "__main__":
     if save_figs:
         fig.savefig("figs/layouts_groups_excl.png", dpi=300, bbox_inches="tight", format="png")
 
+    # Run the main WakeMap computation process (parallel)
     wake_map.compute_raw_expected_powers_parallel()
 
-    ee = wake_map.process_existing_expected_powers()
-    ce = wake_map.process_candidate_expected_powers()
-
-    # Candidate map (identical, as expected)
+    # Create a figure showing the candidate value across the WakeMap domain, as well as showing
+    # the existing farm and the candidate locations (where the candidate value is evaluated)
     ax = wake_map.plot_candidate_value(value=value)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
@@ -79,7 +86,8 @@ if __name__ == "__main__":
             "figs/candidate_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png"
         )
 
-    # Existing map (differ slightly in shape, magnitude shift. Unsurprising; seems reasonable)
+    # Create a figure showing the existing farm value across the WakeMap domain, as well as showing
+    # the existing farm and the candidate locations (where the existing value is evaluated)
     ax = wake_map.plot_existing_value(value=value)
     ax = wake_map.plot_existing_farm(ax=ax)
     ax = wake_map.plot_candidate_locations(ax=ax)
@@ -91,7 +99,7 @@ if __name__ == "__main__":
             "figs/existing_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png"
         )
 
-    # Existing map, subset (as for full map).
+    # Create a figure showing the existing farm value for a subset of the existing farm.
     subset=range(10)
     ax = wake_map.plot_existing_value(value=value, subset=subset, cmap="Blues")
     ax = wake_map.plot_existing_farm(ax=ax)
