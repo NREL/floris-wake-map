@@ -16,11 +16,16 @@ if __name__ == "__main__":
         ),
         ti_table=0.06
     )
+    ax = wind_rose_demo.plot()
 
     # Optionally, we can save the output figures
     save_figs = False
     if save_figs and not os.path.exists("figs"):
         os.makedirs("figs")
+
+    if save_figs:
+        fig = ax.get_figure()
+        fig.savefig("figs/ex02-1_wind_rose.png", dpi=300, bbox_inches="tight", format="png")
 
     # Set value to process and plot. Options: "aep_loss" or "expected_power"
     value = "aep_loss"
@@ -62,13 +67,14 @@ if __name__ == "__main__":
     ax = wake_map.plot_exclusion_zones(ax=ax)
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig("figs/layouts_ex_excl.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/ex02-2_existing.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_locations(ax=ax)
     if save_figs:
-        fig.savefig("figs/layouts_can_excl.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/ex02-3_candidate_locs.png", dpi=300, bbox_inches="tight", format="png")
     ax = wake_map.plot_candidate_layout(35, ax=ax)
+    ax.legend()
     if save_figs:
-        fig.savefig("figs/layouts_groups_excl.png", dpi=300, bbox_inches="tight", format="png")
+        fig.savefig("figs/ex02-4_candidate_cluster.png", dpi=300, bbox_inches="tight", format="png")
 
     # Run the main WakeMap computation process (parallel)
     wake_map.compute_raw_expected_powers_parallel()
@@ -82,9 +88,7 @@ if __name__ == "__main__":
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig(
-            "figs/candidate_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png"
-        )
+        fig.savefig("figs/ex02-5_candidate_val.png", dpi=300, bbox_inches="tight", format="png")
 
     # Create a figure showing the existing farm value across the WakeMap domain, as well as showing
     # the existing farm and the candidate locations (where the existing value is evaluated)
@@ -95,9 +99,7 @@ if __name__ == "__main__":
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig(
-            "figs/existing_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png"
-        )
+        fig.savefig("figs/ex02-6_existing_val.png", dpi=300, bbox_inches="tight", format="png")
 
     # Create a figure showing the existing farm value for a subset of the existing farm.
     subset=range(10)
@@ -109,8 +111,6 @@ if __name__ == "__main__":
     ax.set_aspect("equal")
     fig = ax.get_figure()
     if save_figs:
-        fig.savefig(
-            "figs/subset_power_map_extonly_excl.png", dpi=300, bbox_inches="tight", format="png"
-        )
+        fig.savefig("figs/ex02-7_subset_val.png", dpi=300, bbox_inches="tight", format="png")
 
     plt.show()

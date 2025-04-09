@@ -1,5 +1,3 @@
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 from floris import FlorisModel, WindRose
@@ -17,12 +15,6 @@ if __name__ == "__main__":
         ),
         ti_table=0.06
     )
-    wind_rose_demo.plot()
-
-    # Optionally, we can save the output figures
-    save_figs = False
-    if save_figs and not os.path.exists("figs"):
-        os.makedirs("figs")
 
     # Instantiate a FlorisModel to represent the existing wind farm
     fmodel = FlorisModel("defaults")
@@ -48,19 +40,6 @@ if __name__ == "__main__":
         candidate_cluster_diameter=6000,
         verbose=True
     )
-
-    # Plot the domain of the WakeMap object
-    ax = wake_map.plot_existing_farm()
-    if save_figs:
-        fig = ax.get_figure()
-        fig.savefig("figs/layouts_ex.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wake_map.plot_candidate_locations(ax=ax)
-    if save_figs:
-        fig.savefig("figs/layouts_can.png", dpi=300, bbox_inches="tight", format="png")
-    ax = wake_map.plot_candidate_layout(35, ax=ax)
-    ax.legend()
-    if save_figs:
-        fig.savefig("figs/layouts_groups.png", dpi=300, bbox_inches="tight", format="png")
 
     # Run the main WakeMap computation process
     # (in serial, see also compute_raw_expected_powers_parallel)

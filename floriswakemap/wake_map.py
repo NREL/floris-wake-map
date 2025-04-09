@@ -23,7 +23,7 @@ class WakeMap():
         boundaries: list[(float, float)] | None = None,
         candidate_cluster_layout: np.typing.NDArray | None = None,
         candidate_cluster_diameter: float | None = None,
-        candidate_turbine = "iea_15MW",
+        candidate_turbine: str | Dict = "iea_15MW",
         exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
         verbose: bool = True,
@@ -44,7 +44,8 @@ class WakeMap():
                 location of a candidate. If None, will use a circle of diameter
                 candidate_cluster_diameter to define the layout.
             candidate_cluster_diameter: Diameter of the group of turbines in meters
-            candidate_turbine: Turbine type to use for candidate turbines
+            candidate_turbine: Turbine type to use for candidate turbines. Can be a custom turbine
+                in the form of a dictionary as expected by FLORIS.
             exclusion_zones: List of exclusion zones, where each zone is defined by a list of
                 (x,y) tuples. Exclusion zones are polygons that are not allowed to contain any
                 candidate turbines. If None, will default to an empty list.
@@ -596,16 +597,16 @@ class WakeMap():
             self.all_candidates_x[candidate_idx],
             self.all_candidates_y[candidate_idx],
             linestyle="None",
+            alpha=0.3,
+            label="Centerpoint",
             **plotting_dict,
-            label="Centerpoint"
         )
 
         ax.plot(
             self.all_candidates_x[candidate_idx] + self.candidate_layout[:, 0],
             self.all_candidates_y[candidate_idx] + self.candidate_layout[:, 1],
-            label="Candidate layout",
             linestyle="None",
-            alpha=0.5,
+            label="Candidate layout",
             **plotting_dict,
         )
 
