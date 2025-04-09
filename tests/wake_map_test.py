@@ -89,6 +89,16 @@ def test_create_candidate_locations():
                 (wm_test.all_candidates_y[i] - wm_test.fmodel_existing.layout_y[j])**2
             ) >= 500
 
+    # Check that a dictionary candidate turbine is accepted
+    wm_test_2 = copy.deepcopy(wm_test)
+    candidate_turbine_test = wm_test.fmodel_all_candidates.core.farm.turbine_definitions[0]
+    candidate_turbine_test["turbine_type"] = "test_turbine"
+    wm_test_2.candidate_turbine = candidate_turbine_test
+    wm_test_2.create_candidate_locations()
+    assert wm_test_2.candidate_turbine["turbine_type"] == "test_turbine"
+    assert (wm_test_2.fmodel_all_candidates.core.farm.turbine_definitions[0]["turbine_type"]
+            == "test_turbine")
+
 def test_create_candidate_clusters():
     wm_test_2 = copy.deepcopy(wm_test)
 
