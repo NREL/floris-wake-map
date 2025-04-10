@@ -40,8 +40,8 @@ jobs:
         for i in *.py; do
           echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Running example- $i"
 
-          # If "convert_examples" is in i, skip this script
-          if [[ $i == *"convert_examples"* ]]; then
+          # Skip large examples
+          if [[ $i == *"large"* ]]; then
             continue
           fi
 
