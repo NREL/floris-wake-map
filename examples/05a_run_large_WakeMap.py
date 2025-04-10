@@ -18,22 +18,6 @@ from floriswakemap import WakeMap
 
 
 def construct_example_05_WakeMap():
-    # Specify outer boundary
-    # outer_boundary = np.array([
-    #     [0, 0],
-    #     [50, 0],
-    #     [60, 20],
-    #     [50, 30],
-    #     [70, 100],
-    #     [100, 130],
-    #     [110, 200],
-    #     [40, 190],
-    #     [30, 170],
-    #     [35, 165],
-    #     [30, 140],
-    #     [10, 30],
-    #     [0, 0]
-    # ])*1e3
 
     # Load and construct wind rose
     df = pd.read_csv("wind_rose_ex5.csv")
@@ -152,21 +136,7 @@ def construct_example_05_WakeMap():
         [13, 50],
     ])*1e3
 
-    # Load and construct wind rose
-    df = pd.read_csv("wind_rose_ex5.csv")
-    ws = np.unique(df["ws"])
-    wd = np.unique(df["wd"])
-    freq = df["freq_val"].values.reshape((len(ws), len(wd))).T
-
-    wind_rose = WindRose(
-        wind_directions=wd,
-        wind_speeds=ws,
-        ti_table=0.06,
-        freq_table=freq,
-    )
-
     # Instantiate WakeMap and return
-    # TODO: consider creating a gridded candidate? Could be nice.
     wake_map = WakeMap(
         fmodel_existing_all,
         wind_rose,
@@ -184,9 +154,8 @@ if __name__ == "__main__":
     # Create the WakeMap object, run the computation in parallel, and save the output
     wake_map = construct_example_05_WakeMap()
     filename = "example_05_raw_expected_powers.npz"
-    # Run the main WakeMap computation regime (takes ~60 minutes with 8 cores)
-    # Takes around 30 minutes to compute for the existing turbines
-    # Takes around 20 minutes to compute for the candidate turbines
+    # Run the main WakeMap computation regime. Using catch_warnings to quiet warning in Gauss
+    # deflection model.
     with warnings.catch_warnings(action="ignore", category=RuntimeWarning):
         # Running with catch_warnings to quiet warning in gauss deflection model
         wake_map.compute_raw_expected_powers_parallel()
