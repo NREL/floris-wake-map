@@ -92,8 +92,10 @@ def construct_example_05_WakeMap():
         hexagonal_packing=True,
     )
     t_start = perf_counter()
-    _, layout_x_1, layout_y_1 = layout_opt_1.optimize() # ~60 seconds
-    print("Existing farm 1 layout optimization time: {0:.1f} s".format(perf_counter() - t_start))
+    n_turbs_1, layout_x_1, layout_y_1 = layout_opt_1.optimize() # ~60 seconds
+    print("Existing farm 1 layout created with {0} turbines in optimization time: {1:.1f} s".format(
+        n_turbs_1, perf_counter() - t_start
+    ))
 
     fmodel_2 = FlorisModel("defaults")
     fmodel_2.set(turbine_type=["iea_15MW"], wind_data=wind_rose, reference_wind_height=150.0)
@@ -103,8 +105,10 @@ def construct_example_05_WakeMap():
         min_dist=1852,
     )
     t_start = perf_counter()
-    _, layout_x_2, layout_y_2 = layout_opt_2.optimize() # ~120 seconds
-    print("Existing farm 2 layout optimization time: {0:.1f} s".format(perf_counter() - t_start))
+    n_turbs_2, layout_x_2, layout_y_2 = layout_opt_2.optimize() # ~120 seconds
+    print("Existing farm 2 layout created with {0} turbines in optimization time: {1:.1f} s".format(
+        n_turbs_2, perf_counter() - t_start
+    ))
 
     fmodel_3 = FlorisModel("defaults")
     fmodel_3.set(turbine_type=["iea_15MW"], wind_data=wind_rose, reference_wind_height=150.0)
@@ -114,14 +118,49 @@ def construct_example_05_WakeMap():
         min_dist=2000, # Slightly less dense
     )
     t_start = perf_counter()
-    _, layout_x_3, layout_y_3 = layout_opt_3.optimize() # ~60 seconds
-    print("Existing farm 3 layout optimization time: {0:.1f} s".format(perf_counter() - t_start))
+    n_turbs_3, layout_x_3, layout_y_3 = layout_opt_3.optimize() # ~60 seconds
+    print("Existing farm 3 layout created with {0} turbines in optimization time: {1:.1f} s".format(
+        n_turbs_3, perf_counter() - t_start
+    ))
 
     fmodel_1.set(layout_x=layout_x_1, layout_y=layout_y_1)
     fmodel_2.set(layout_x=layout_x_2, layout_y=layout_y_2)
     fmodel_3.set(layout_x=layout_x_3, layout_y=layout_y_3)
 
     fmodel_existing_all = FlorisModel.merge_floris_models([fmodel_1, fmodel_2, fmodel_3])
+
+    # Switch to turboparkgauss with defaults
+    fm_dict = fmodel_existing_all.core.as_dict()
+    fm_dict["wake"] = {
+        "model_strings": {
+            "combination_model": "sosfs",
+            "deflection_model": "none",
+            "turbulence_model": "none",
+            "velocity_model": "turboparkgauss"
+         },
+         "enable_secondary_steering": False,
+         "enable_yaw_added_recovery": False,
+         "enable_active_wake_mixing": False,
+         "enable_transverse_velocities": False,
+         "wake_velocity_parameters": {
+            "turboparkgauss": {
+                "A": 0.04,
+                "include_mirror_wake": True,
+            }
+        },
+        "wake_deflection_parameters": {
+            "none": {}
+        },
+        "wake_turbulence_parameters": {
+            "none": {}
+        }
+    }
+    fm_dict["solver"] = {
+        "type": "turbine_cubature_grid",
+        "turbine_grid_points": 4,
+    }
+    fmodel_existing_all = FlorisModel(fm_dict)
+    fmodel_existing_all.show_config()
 
     # Specify boundary for new lease area
     lease_boundary = np.array([
@@ -142,7 +181,8 @@ def construct_example_05_WakeMap():
         wind_rose,
         min_dist=1852,
         boundaries=lease_boundary,
-        candidate_cluster_diameter=6000,
+        candidate_turbine="iea_15MW",
+        candidate_cluster_diameter=10000,
         exclusion_zones=exclusion_zones,
         verbose=True,
         silence_floris_warnings=True,
@@ -154,8 +194,6 @@ if __name__ == "__main__":
     # Create the WakeMap object, run the computation in parallel, and save the output
     wake_map = construct_example_05_WakeMap()
     filename = "example_05_raw_expected_powers.npz"
-    # Run the main WakeMap computation regime. Using catch_warnings to quiet warning in Gauss
-    # deflection model.
     with warnings.catch_warnings(action="ignore", category=RuntimeWarning):
         # Running with catch_warnings to quiet warning in gauss deflection model
         wake_map.compute_raw_expected_powers_parallel()
