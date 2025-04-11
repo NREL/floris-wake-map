@@ -23,7 +23,7 @@ class WakeMap():
         boundaries: list[(float, float)] | None = None,
         candidate_cluster_layout: np.typing.NDArray | None = None,
         candidate_cluster_diameter: float | None = None,
-        candidate_turbine = "iea_15MW",
+        candidate_turbine: str | Dict = "iea_15MW",
         exclusion_zones: list[list[(float, float)]] = [[]],
         parallel_max_workers: int = -1,
         verbose: bool = True,
@@ -44,7 +44,8 @@ class WakeMap():
                 location of a candidate. If None, will use a circle of diameter
                 candidate_cluster_diameter to define the layout.
             candidate_cluster_diameter: Diameter of the group of turbines in meters
-            candidate_turbine: Turbine type to use for candidate turbines
+            candidate_turbine: Turbine type to use for candidate turbines. Can be a custom turbine
+                in the form of a dictionary as expected by FLORIS.
             exclusion_zones: List of exclusion zones, where each zone is defined by a list of
                 (x,y) tuples. Exclusion zones are polygons that are not allowed to contain any
                 candidate turbines. If None, will default to an empty list.
@@ -60,6 +61,7 @@ class WakeMap():
 
         self.fmodel_existing = fmodel
         self.fmodel_existing.set(wind_data=wind_rose)
+        self._reference_wind_height = self.fmodel_existing.reference_wind_height
 
         if silence_floris_warnings:
             logger = logging.getLogger(name="floris")
@@ -163,7 +165,8 @@ class WakeMap():
         self.fmodel_all_candidates.set(
             layout_x=self.all_candidates_x,
             layout_y=self.all_candidates_y,
-            turbine_type=[self.candidate_turbine]
+            turbine_type=[self.candidate_turbine],
+            reference_wind_height=self._reference_wind_height,
         )
 
         self.n_candidates = self.all_candidates_x.shape[0]
@@ -445,7 +448,8 @@ class WakeMap():
         self.fmodel_all_candidates.set(
             layout_x=all_candidates_x2,
             layout_y=all_candidates_y2,
-            turbine_type=[self.candidate_turbine]
+            turbine_type=[self.candidate_turbine],
+            reference_wind_height=self._reference_wind_height,
         )
 
         self.fmodel_all_candidates.run_no_wake()
@@ -528,6 +532,7 @@ class WakeMap():
                 turbine_type=(
                     np.array(self.fmodel_existing.core.farm.turbine_definitions)[subset]
                 ).tolist(),
+                reference_wind_height=self._reference_wind_height,
             )
 
         layout_viz.plot_turbine_points(fmodel_plot, ax=ax, plotting_dict=plotting_dict)
@@ -592,16 +597,16 @@ class WakeMap():
             self.all_candidates_x[candidate_idx],
             self.all_candidates_y[candidate_idx],
             linestyle="None",
+            alpha=0.3,
+            label="Centerpoint",
             **plotting_dict,
-            label="Centerpoint"
         )
 
         ax.plot(
             self.all_candidates_x[candidate_idx] + self.candidate_layout[:, 0],
             self.all_candidates_y[candidate_idx] + self.candidate_layout[:, 1],
-            label="Candidate layout",
             linestyle="None",
-            alpha=0.5,
+            label="Candidate layout",
             **plotting_dict,
         )
 
