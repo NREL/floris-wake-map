@@ -155,10 +155,10 @@ def construct_example_05_WakeMap():
             "none": {}
         }
     }
-    fm_dict["solver"] = {
-        "type": "turbine_cubature_grid",
-        "turbine_grid_points": 4,
-    }
+    # fm_dict["solver"] = {
+    #     "type": "turbine_cubature_grid",
+    #     "turbine_grid_points": 4,
+    # }
     fmodel_existing_all = FlorisModel(fm_dict)
     fmodel_existing_all.show_config()
 
