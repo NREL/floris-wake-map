@@ -354,15 +354,13 @@ class AreaSelector():
         self,
         ax: plt.Axes | None = None,
         cmap: str="viridis",
-        plotting_dict: Dict[str, Any] = {}
     ):
         """
-        UNDER DEVELOPMENT: Plot the combined objective function across the area.
+        Plot the objective function value over the domain
 
         Args:
             ax: Axes object to plot on. If None, new axes will be created.
             cmap: Colormap to use for the objective function.
-            plotting_dict: Dictionary of plotting options
         Returns:
             ax: Axes object with the constraints plotted.
         """
@@ -370,16 +368,13 @@ class AreaSelector():
             raise RuntimeError("Cannot plot objective until objective has been added.")
 
         if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = ax.get_figure()
+            _, ax = plt.subplots()
 
-        ctrf = ax.tricontourf(
-            self.wake_map.all_candidates_x,
-            self.wake_map.all_candidates_y,
-            -self.objective_value,
-            cmap=cmap
+        self.wake_map.plot_contour(
+            values = -self.objective_value,
+            ax=ax,
+            cmap=cmap,
+            colorbar_label="Objective value"
         )
 
-        cbar = fig.colorbar(ctrf, ax=ax)
-        cbar.set_label("Objective value")
+        return ax

@@ -3,6 +3,7 @@ __pycache__/
 .cache
 *.ipynb
 *.ipynb_checkpoints
+!examples/05b*.ipynb
 *.pyc
 *.egg-info
 dist
@@ -23,6 +24,7 @@ pip-wheel-metadata
 # Compressed outputs
 *.pkl
 *.npz
+!examples/example_05_raw_expected_powers.npz
 
 # Graphical outputs
 *.png
