@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "floriswakemap"
-version = "0.1"
+version = "0.2"
 description = "Map of cluster wake impacts on existing farms for planning new wind farm locations."
 readme = "README.md"
 requires-python = ">=3.10"
