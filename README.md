@@ -14,7 +14,7 @@ based on an instantiated `WakeMap` object.
 To use the `floriswakemap` package, first clone the repository onto your computer by running the
 following from your shell:
 ```
-git clone https://github.com/nrel/floris
+git clone https://github.com/nrel/floris-wake-map
 ```
 
 We recommend that you install `floriswakemap` into a conda environment. To create a conda
